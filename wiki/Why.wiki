@@ -3,12 +3,16 @@
 
 = Introduction =
 
-When I started to develope code using JMS, it was a new technology for me. I started with the first Hello World of ACTIVEMQ-CPP and I thought that it was an very upper level API, that allows you to distribute your content in a easy way. And it's true.
+When I started to develope code using JMS, it was a new technology for me. I started with the first Hello World of ACTIVEMQ-CPP and I thought that it was an very upper level API, that allows you a easy way to distribute your content. And it's true.
 <p>
 If you are thinking in only one producer and one consumer that sends/receive messages probably you are thinking that you dont need to use this wrapper, and its probably true. But there are some goals that this wrapper do for you. 
 
-= Details =
+= Goals =
 
+The main goals are:
+
+  * Easy way to create complex JMS producer/consumer networks: ActiveInterface provides you a simple API to distribute your JMS networks over three concepts:
+        ** hola
 Add your content here.  Format your content with:
   * Text in *bold* or _italic_
   * Headings, paragraphs, and lists
