@@ -24,7 +24,7 @@ The main goals are:
       If you need to redirect data between one destination to other, or if you want to be allowed to modify dinamically your JMS network based in events, !ActiveInterface gives you a way to do it.
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
 
-  As you can see in the above figure, !ActiveInterface provides an API that allow you to create new connections (producer/consumers) and associate it to the architecture.
+  As you can see in the figure above, !ActiveInterface provides an API that allow you to create new connections (producer/consumers) and associate it to the architecture.
  * *Initialization by XML:* !ActiveInterface provides you to the possibility to initialize your JMS network using a XML file. This XML describes the topology of your JMS network. 
 
 {{{
@@ -85,3 +85,5 @@ The main goals are:
  This tool allows your application to hold down a very high peaks of messages and resending when will be possible. The throughput of the library is more than 1000 messages/second in normal mode and more than 200 messages/second in persistence mode. *This stats depends of the hosts in where you are making tests, but, tests made in the same machine using native ActiveMQ-CPP code and using !ActiveInterface shows that the throughput are very similar.*
 
    * *Multiplatform & thread-safe:* !ActiveInterface is developed and test in a multiplatform environment (Windows and Linux) and firstly is prepared to use it in a multithread application.
+
+= Conclusion =
