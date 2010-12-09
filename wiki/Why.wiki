@@ -11,14 +11,14 @@ If you are thinking in only one producer and one consumer that sends/receive mes
 
 The main goals are:
 
-  * *Easy way to create complex JMS producer/consumer networks:* ActiveInterface provides you a simple API to distribute your JMS networks over three concepts:
+  * *Easy way to create complex JMS producer/consumer networks:* !ActiveInterface provides you a simple API to distribute your JMS networks over three concepts:
         ** *Connection:* This connection wrappers a real producer/consumer. 
         ** *Link:* Link is a middle layer that allows the user to define the default properties that are sent in all messages that are producer throw this link. 
         ** *Service:* Service is the upper side and the way to send data in ActiveInterface. 
 
-     ActiveInterface group connections allowing you to send the same message to different locations. Also, ActiveInterface allows you to define the default properties that are sent with this message (through link identifier).
+     !ActiveInterface group connections allowing you to send the same message to different locations. Also, !ActiveInterface allows you to define the default properties that are sent with this message (through link identifier).
 <p>
-     For example, if you need to send a message to a group of persons, and this message should have different properties for each person, ActiveInterface gives you an API (link to api) or a XML configuration file to do this and so much more (link to explain architecture section).
+     For example, if you need to send a message to a group of persons, and this message should have different properties for each person, !ActiveInterface gives you an API (link to api) or a XML configuration file to do this and so much more (link to explain architecture section).
 
    * *Creating/Modifying/Delete architecture in real time:*
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
