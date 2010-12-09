@@ -25,4 +25,4 @@ The main goals are:
    * *No restrictions to use native ActiveMQ-CPP concepts:*
    * *Multi type messages:*
    * *Persistence:*
-   * *Multiplatform:*
+   * *Multiplatform & multithread:*
