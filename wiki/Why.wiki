@@ -20,4 +20,9 @@ The main goals are:
 <p>
      For example, if you need to send a message to a group of persons, and this message should have different properties for each person, ActiveInterface gives you an API (link to api) or a XML configuration file to do this and so much more (link to explain architecture section).
 
+   * *Creating/Modifying/Delete architecture in real time:*
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
+
+   * *Multi type messages:*
+   * *Persistence:*
+   * *
