@@ -20,6 +20,15 @@ The main goals are:
 <p>
      For example, if you need to send a message to a group of persons, and this message should have different properties for each person, !ActiveInterface gives you an API (link to api) or a XML configuration file to do this and so much more (link to explain architecture section).
 
+   {{{
+         void newProducer (...);
+         void newConsumer (...);
+         void newLink (...);
+         bool destroyLink (std::string &linkId) throw (ActiveException);
+         bool destroyService (std::string &serviceId) throw (ActiveException);
+
+   }}}
+
  * *Creating/Modifying/Delete architecture in real time:* !ActiveInterface provides you a easy way to delete, modify or create new connections, links or services in real time. 
       If you need to redirect data between one destination to other, or if you want to be allowed to modify dinamically your JMS network based in events, !ActiveInterface gives you a way to do it.
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
