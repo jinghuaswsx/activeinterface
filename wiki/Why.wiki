@@ -30,7 +30,7 @@ The main goals are:
            <connectionslist>
                 <connection
                   id="producer1"
-                  ipbroker="failover://(tcp://localhost:61616)"
+                  ipbroker="failover://(tcp://localhost:61616?                 connection.useAsyncSend=true)"
                   type=1
                   destination="alarms"
                   persistent=0
@@ -58,9 +58,9 @@ The main goals are:
                </service>
             </serviceslist>
 }}}
-
-
- abstracts you of some concepts like SSL (you will only add the path to public key to XML or by API), message concepts (time to live, priorities, parameter, properties), responses, etc. but !ActiveInterface doesn't restrict the way to interactuate with broker or directly with ActiveMQ-CPP API like all posibilities that could be added to broker URI.
+      
+     This XML file defines a simple producer and consumer of a queue _alarms_. As you can see, you can define all concepts related to a JMS connection, but only defining boolean values that are explained in this (link to configuration page) section.
+   Also, !ActiveInterface abstracts you of some concepts like SSL (you will only add the path to public key to XML or by API), message concepts (time to live, priorities, parameter, properties), response messages to petition, etc., but !ActiveInterface was developed to try to don't restrict the interactuation from the user with broker or to native ActiveMQ-CPP API (you can use all connection parameters).
    * *Multi type messages:*
    * *Persistence:*
    * *Multiplatform & multithread:*
