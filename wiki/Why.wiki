@@ -67,7 +67,14 @@ The main goals are:
    !ActiveInterface abstracts you of some concepts like SSL (you will only add the path to public key to XML or by API), message concepts (time to live, priorities, parameter, properties), response messages to petition, etc., but !ActiveInterface was developed to don't restrict the interactuation from the user with broker or to native ActiveMQ-CPP API (you can use all connection parameters directly in the ipbroker).
    * *Multi type messages:* One of the better things of !ActiveInterface is that allow the user a simple way to send multitype messages. !ActiveInterface wrapper a native JMS message and gives you a way to insert different types (int, real, strings or bytes) and a way to take it, as the same way that a Hash Map. This data in !AciveInterface is known as _parameters_.
      Also, !ActiveInterface allows you to insert properties identifying it by a key (as parameters describes above). 
-
-
+{{{
+  void   insertIntParameter (std::string &key, int value)
+  void   insertRealParameter (std::string &key, float value)
+  void   insertStringParameter (std::string &key, std::string &value)
+  void   insertBytesParameter (std::string &key, std::vector< unsigned char > &value)
+  void   insertIntProperty (std::string &key, int value)
+  void   insertRealProperty (std::string &key, float value)
+  void   insertStringProperty (std::string &key, const std::string &value)
+}}}
    * *Persistence:*
    * *Multiplatform & multithread:*
