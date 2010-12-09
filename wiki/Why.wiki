@@ -18,6 +18,6 @@ The main goals are:
 
      ActiveInterface group connections allowing you to send the same message to different locations. Also, ActiveInterface allows you to define the default properties that are sent with this message (through link identifier).
 <p>
-     For example, if you need to send a message to a group of persons, and this message should have different properties for each person, ActiveInterface gives you an API (link to api) or a XML configuration file to do this. 
+     For example, if you need to send a message to a group of persons, and this message should have different properties for each person, ActiveInterface gives you an API (link to api) or a XML configuration file to do this and so much more (link to explain architecture section).
 
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
