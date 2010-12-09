@@ -76,5 +76,8 @@ The main goals are:
   void   insertRealProperty (std::string &key, float value)
   void   insertStringProperty (std::string &key, const std::string &value)
 }}}
+
+This parameters could be taken iteratively, and will allow you to send different types of messages and take dinamically if exists or not.
+
    * *Persistence:*
    * *Multiplatform & multithread:*
