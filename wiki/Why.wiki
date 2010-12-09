@@ -23,7 +23,7 @@ The main goals are:
    * *Creating/Modifying/Delete architecture in real time:* !ActiveInterface provides you a easy way to delete, modify or create new connections, links or services in real time. 
       If you need to redirect data between one destination to other, or if you want to be allowed to modify dinamically your JMS network based in events, !ActiveInterface gives you a way to do it.
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
-   * *No restrictions to use native ActiveMQ-CPP concepts:*
+   * *No restrictions to use native ActiveMQ-CPP concepts:* !ActiveInterface abstracts you of some concepts like SSL (you will only add the path to public key to XML or by API), message concepts (time to live, priorities, parameter, properties), responses, etc. but !ActiveInterface doesn't restrict the way to interactuate with broker or directly with ActiveMQ-CPP API like all posibilities that could be added to broker URI.
    * *Multi type messages:*
    * *Persistence:*
    * *Multiplatform & multithread:*
