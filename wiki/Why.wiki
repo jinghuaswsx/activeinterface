@@ -59,7 +59,7 @@ The main goals are:
             </serviceslist>
 }}}
       
-     This XML file defines a simple producer and consumer of a queue _alarms_. As you can see, you have to define all concepts related to a JMS connection (durability, persistent, type of connection, URI or destination) but you have to code nothing. Only one person with the JMS _know how_ should be enough to use this library.
+     This XML file defines a simple producer and consumer of a queue _alarms_. As you can see, you have to define all concepts related to a JMS connection (durability, persistent, type of connection, URI or destination) but you have to code nothing. *Only one person with the JMS _know how_ should be enough to use it, distribute or balance messages in a JMS network.*
    !ActiveInterface abstracts you of some concepts like SSL (you will only add the path to public key to XML or by API), message concepts (time to live, priorities, parameter, properties), response messages to petition, etc., but !ActiveInterface was developed to don't restrict the interactuation from the user with broker or to native ActiveMQ-CPP API (you can use all connection parameters directly in the ipbroker).
    * *Multi type messages:*
    * *Persistence:*
