@@ -73,7 +73,7 @@ The main goals are:
       void   insertStringProperty (std::string &key, const std::string &value)
      }}}
 
-This methods are described in the API (here). This would be good for you if you want to dont take care of the protocol and you want to insert and get the information so easy. Also, parameters and properties could be taken iteratively, and will allow you to send different types of messages and take dinamically if exists or not.
+   This methods are described in the API (here). This would be good for you if you want to dont take care of the protocol and you want to insert and get the information in a simple way. Also, parameters and properties could be taken iteratively, and will allow you to send different types of messages and take dinamically if exists or not.
 
    * *Persistence:*
    * *Multiplatform & multithread:*
