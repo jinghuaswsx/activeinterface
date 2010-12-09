@@ -22,7 +22,7 @@ The main goals are:
 
    * *Creating/Modifying/Delete architecture in real time:*
      http://i.picasion.com/pic34/f9d6c34dedd584322d0c559408bb14b6.gif
-
+   * *No restrictions to use native ActiveMQ-CPP concepts:*
    * *Multi type messages:*
    * *Persistence:*
-   * *
+   * *Multiplatform:*
