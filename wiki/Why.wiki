@@ -26,7 +26,7 @@ The main goals are:
          void newLink (...);
          bool destroyLink (std::string &linkId) throw (ActiveException);
          bool destroyService (std::string &serviceId) throw (ActiveException);
-
+         void   getConnsByDestination (std::string &destination, std::list< ActiveConnection * > &connectionListR) throw (ActiveException)
    }}}
 
  * *Creating/Modifying/Delete architecture in real time:* !ActiveInterface provides you a easy way to delete, modify or create new connections, links or services in real time. 
