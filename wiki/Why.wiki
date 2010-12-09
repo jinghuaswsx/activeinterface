@@ -82,4 +82,4 @@ The main goals are:
     For this problems, !ActiveInterface provides you a internal queue and a persistent system that you could manipulate by your own. All messages are serialized into a persistent file, and enqueued into a internal queue that acts like a buffer of messages.<p>
     This tool allows your application to hold down a very high peaks of messages and resending when will be possible. The throughput of the library is more than 1000 messages/second in normal mode and more than 200 messages/second in persistence mode. *This stats depends of the hosts in where you are making tests, but, tests made in the same machine using native ActiveMQ-CPP code and using !ActiveInterface shows that the throughput are very similar.*
 
-   * *Multiplatform & multithread:*
+   * *Multiplatform & thread-safe:* !ActiveInterface is developed and test in a multiplatform environment (Windows and Linux) and firstly is prepared to use it in a multithread application.
