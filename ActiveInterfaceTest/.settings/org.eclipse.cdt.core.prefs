@@ -1,0 +1,4 @@
+#Tue Jun 29 19:18:03 CEST 2010
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.exe.debug.2037414321=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="true">\n<variable delimiter\=";" name\="LOG4CXX_CONFIGURATION" operation\="append" value\="${ProjDirPath}"/>\n</environment>\n
+environment/project/cdt.managedbuild.config.gnu.exe.release.2124013602=<?xml version\="1.0" encoding\="UTF-8" standalone\="no"?>\n<environment append\="true" appendContributed\="true">\n<variable delimiter\=";" name\="LOG4CXX_CONFIGURATION" operation\="append" value\="${ProjDirPath}"/>\n</environment>\n

@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<connectionslist>
+        <connection
+                id="productor1"
+                ipbroker="failover://(tcp://localhost:61616?connection.useAsyncSend=true)"
+                type=1
+                destination="alarmas"
+                persistent=0
+                topic=0
+                maxsizequeue=1
+                persistence=10
+        />
+</connectionslist>
+
+<linkslist>
+        <link id="link1" name="alarmas" connectionid="productor1">
+                <properties>
+                        <property name="otra" type=0 value=1 />
+                        <property name="otrafloat" type=1 value=1.0 />
+                        <property name="otrastring" type=2 value="todos" />
+                </properties>
+        </link>
+</linkslist>
+
+<serviceslist>
+        <service id=1>
+                <link id="link1" />
+        </service>
+</serviceslist>
+~                                                                                                                                                                                                              
+~                     
