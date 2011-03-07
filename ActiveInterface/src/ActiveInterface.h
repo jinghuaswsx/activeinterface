@@ -275,7 +275,7 @@ namespace ai{
 		/**
 		 * Method that returns all services that are using in this time
 		 *
-		 * @param serviceList reference array in which method is going to write all
+		 * @param servicesList reference array in which method is going to write all
 		 * serviceList
 		 *
 		 * @throws ActiveException if something bad happens
