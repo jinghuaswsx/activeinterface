@@ -65,6 +65,11 @@ namespace ai{
 		 */
 		ActiveConnection* activeConnection;
 
+		/**
+		 * Static var use by log4cxx for the logging system
+		 */
+		static log4cxx::LoggerPtr logger;
+
 	public:
 		/**
 		 * Default constructor

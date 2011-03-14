@@ -27,6 +27,7 @@
 #include "ActiveInterface.h"
 #include "core/ActiveManager.h"
 #include "utils/exception/ActiveException.h"
+#include "utils/exception/ActiveInputException.h"
 #include "core/concurrent/ReadersWriters.h"
 
 #include "log4cxx/logger.h"
@@ -40,7 +41,7 @@ using namespace ai;
 
 LoggerPtr ActiveInterface::logger(Logger::getLogger("ActiveInterface"));
 
-void ActiveInterface::startup(const std::string& configurationFile)
+void ActiveInterface::init(const std::string& configurationFile)
 	throw (ActiveException){
 
 	std::stringstream logMessage;
@@ -54,39 +55,59 @@ void ActiveInterface::startup(const std::string& configurationFile)
     	 readersWriters.writerLock();
     	 try{
     		 //setting state
-    		 setState(INITIALIZING);
+    		 setState(NOT_INITIALIZED);
     		 //initializing...
     		 ActiveManager::getInstance()->init(configurationFile,this);
+    		 //setting state
+    		 setState(INITIALIZED);
     	 }catch(...){
         	 logMessage << "ActiveException. Library is not initialized by XML File.";
         	 LOG4CXX_DEBUG(logger, logMessage.str().c_str());
     	 }
     	 //unlocking
     	 readersWriters.writerUnlock();
-    	 //starting services, after unlock to protect the deadlock if
-    	 //the user uses blocking connection to broker
-    	 ActiveManager::getInstance()->startConnections();
-    	 setState(INITIALIZED);
 
      } catch(log4cxx::helpers::Exception&) {
-    	 setState(NOT_INITIALIZED);
+		 //setting state
+		 setState(NOT_INITIALIZED);
     	 readersWriters.writerUnlock();
     	 logMessage << "Logging Exception. Shutting down ActiveInterface Library.";
     	 LOG4CXX_DEBUG(logger, logMessage.str().c_str());
     	 throw ActiveException(logMessage);
      }catch(ActiveException& ae) {
-    	 setState(NOT_INITIALIZED);
+		 //setting state
+		 setState(NOT_INITIALIZED);
     	 readersWriters.writerUnlock();
-    	 logMessage << "ActiveException. Error starting up.";
+    	 logMessage << "ActiveException. Error initializing...";
     	 LOG4CXX_DEBUG(logger, logMessage.str().c_str());
     	 throw ae;
      }catch (...){
-    	 setState(NOT_INITIALIZED);
+		 //setting state
+		 setState(NOT_INITIALIZED);
     	 readersWriters.writerUnlock();
-    	 logMessage << "UnknownException. Shutting down ActiveInterface Library.";
+    	 logMessage << "UnknownException. Initializing library";
     	 LOG4CXX_DEBUG(logger, logMessage.str().c_str());
     	 throw ActiveException(logMessage);
      }
+}
+
+void ActiveInterface::startup()	throw (ActiveException){
+	//starting services, after unlock to protect the deadlock if
+	//the user uses blocking connection to broker
+	//Its not protected because if the connection is blocking could make a
+	//deadlock
+	std::stringstream logMessage;
+	try{
+		ActiveManager::getInstance()->startConnections();
+	}catch(ActiveException& ae){
+		logMessage << "ActiveException. Error starting up." << std::endl;
+		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+		throw ae;
+	}catch(...){
+		logMessage << "UnknownException. Starting up..." << std::endl;
+   		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+   		throw ActiveException(logMessage);
+	}
 }
 
 void ActiveInterface::send(	std::string& serviceId,
@@ -95,16 +116,19 @@ void ActiveInterface::send(	std::string& serviceId,
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->sendData(serviceId,activeMessage);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
 		readersWriters.readerUnlock();
 		LOG4CXX_ERROR(logger,ae.getMessage().c_str());
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage << "Unknown exception sending data";
@@ -120,10 +144,10 @@ void ActiveInterface::send(	std::string& serviceId,
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->sendData(	serviceId,
 												activeMessage,
 												positionInQueue);
@@ -132,6 +156,9 @@ void ActiveInterface::send(	std::string& serviceId,
 		readersWriters.readerUnlock();
 		LOG4CXX_ERROR(logger,ae.getMessage().c_str());
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage << "Unknown exception sending data";
@@ -146,16 +173,19 @@ void ActiveInterface::sendResponse(	std::string& connectionId,
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->sendResponse(connectionId,activeMessage);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
 		readersWriters.readerUnlock();
 		LOG4CXX_ERROR(logger,ae.getMessage().c_str());
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage << "Unknown exception sending data";
@@ -180,7 +210,13 @@ void ActiveInterface::newProducer (	std::string& id,
 	throw (ActiveException){
 
 	std::stringstream logMessage;
+
 	try{
+
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
+
 		int type=1;
 		if (requestReply){
 			type=3;
@@ -191,9 +227,6 @@ void ActiveInterface::newProducer (	std::string& id,
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 		readersWriters.writerLock();
-		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
-		}
 		ActiveManager::getInstance()->newConnection(	id,ipBroker,type,destination,
 														topic,persistent,"",false,
 														clientAck,maxSizeQueue,username,
@@ -207,6 +240,9 @@ void ActiveInterface::newProducer (	std::string& id,
 	}catch (ActiveException& ae){
 		readersWriters.writerUnlock();
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception creating producer. Check logs.");
@@ -232,6 +268,11 @@ void ActiveInterface::newConsumer (	std::string& id,
 
 	std::stringstream logMessage;
 	try{
+
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
+
 		int type=0;
 		if (requestReply){
 			type=2;
@@ -242,9 +283,6 @@ void ActiveInterface::newConsumer (	std::string& id,
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 		readersWriters.writerLock();
-		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
-		}
 		ActiveManager::getInstance()->newConnection(	id, ipBroker,type,destination,
 														topic,false,selector,durable,clientAck,
 														0,username,password,clientId,0,
@@ -259,6 +297,9 @@ void ActiveInterface::newConsumer (	std::string& id,
 		logMessage << "Exception creating new consumer to " << ipBroker << " " << destination;
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception creating consumer");
@@ -277,16 +318,17 @@ void ActiveInterface::newLink(	std::string& serviceId,
 	std::stringstream logMessage;
 	try{
 
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
+
 		logMessage << "Creating new link " << linkId << " to service " << serviceId
 				<< " with connection " << connectionId;
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 		readersWriters.writerLock();
-		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
-		}
 		ActiveManager::getInstance()->newLink(	serviceId,linkId,name,
-														connectionId,parameterList);
+												connectionId,parameterList);
 		readersWriters.writerUnlock();
 
 	}catch (ActiveException& ae){
@@ -295,6 +337,9 @@ void ActiveInterface::newLink(	std::string& serviceId,
 				<< " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception creating link. Check logs.");
@@ -309,13 +354,14 @@ void ActiveInterface::addLink (std::string& serviceId, std::string& linkId)
 	std::stringstream logMessage;
 	try{
 
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
+
 		logMessage << "Adding new link " << linkId << " to service " << serviceId;
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 		readersWriters.writerLock();
-		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
-		}
 		ActiveManager::getInstance()->insertInMMap(serviceId,linkId);
 		readersWriters.writerUnlock();
 
@@ -325,6 +371,9 @@ void ActiveInterface::addLink (std::string& serviceId, std::string& linkId)
 					<< " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 		throw ae;
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception adding link. Check logs.");
@@ -338,10 +387,12 @@ void ActiveInterface::getLinksByConn(std::string& connectionId, std::list<Active
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
+
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->getLinksByConn(connectionId,linkList);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
@@ -349,6 +400,9 @@ void ActiveInterface::getLinksByConn(std::string& connectionId, std::list<Active
 		logMessage << "ActiveInterface::getLinksByConn. Exception " << connectionId
 				<< " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting links. Check logs.");
@@ -362,10 +416,10 @@ void ActiveInterface::getLinksByService(std::string& serviceId, std::list<Active
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->getLinksByService(serviceId,linkList);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
@@ -373,6 +427,9 @@ void ActiveInterface::getLinksByService(std::string& serviceId, std::list<Active
 		logMessage << "ActiveInterface::getLinksByService. Exception " <<
 				serviceId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting link. Check logs.");
@@ -387,10 +444,10 @@ void ActiveInterface::getServicesByLink(std::string& linkId,
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->getServicesByLink(linkId,servicesIdList);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
@@ -398,6 +455,9 @@ void ActiveInterface::getServicesByLink(std::string& linkId,
 		logMessage << "ActiveInterface::getServicesByLink. Exception " <<
 				linkId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting services. Check logs.");
@@ -412,10 +472,10 @@ const ActiveConnection* ActiveInterface::getConnByLink(std::string& linkId)
 	ActiveConnection* ac=NULL;
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ac=ActiveManager::getInstance()->getConnByLink(linkId);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
@@ -423,6 +483,9 @@ const ActiveConnection* ActiveInterface::getConnByLink(std::string& linkId)
 		logMessage << "ActiveInterface::getConnByLink. Exception " <<
 				linkId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting connections. Check logs.");
@@ -438,10 +501,10 @@ void ActiveInterface::getConnsByService (	std::string& serviceId,
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->getConnsByService(serviceId,connectionListR);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
@@ -449,6 +512,9 @@ void ActiveInterface::getConnsByService (	std::string& serviceId,
 		logMessage << "ActiveInterface::getConnsByService. Exception " <<
 				serviceId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting connections. Check logs.");
@@ -463,10 +529,10 @@ void ActiveInterface::getConnsByDestination(	std::string& destination,
 
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->getConnsByDestination(destination,connectionListR);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
@@ -474,6 +540,9 @@ void ActiveInterface::getConnsByDestination(	std::string& destination,
 		logMessage << "ActiveInterface::getConnsByDestination. Exception " <<
 				destination << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting connections. Check logs.");
@@ -485,16 +554,19 @@ void ActiveInterface::getConnsByDestination(	std::string& destination,
 void ActiveInterface::getServices(std::list<std::string>& servicesList) throw (ActiveException){
 	std::stringstream logMessage;
 	try{
-		readersWriters.readerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.readerLock();
 		ActiveManager::getInstance()->getServices(servicesList);
 		readersWriters.readerUnlock();
 	}catch (ActiveException& ae){
 		readersWriters.readerUnlock();
 		logMessage << "ActiveInterface::getServices. Exception " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.readerUnlock();
 		logMessage.str("Unknown exception getting connections. Check logs.");
@@ -508,10 +580,10 @@ bool ActiveInterface::destroyConnection(std::string& connectionId) throw (Active
 	bool returnValue=false;
 	std::stringstream logMessage;
 	try{
-		readersWriters.writerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.writerLock();
 		returnValue=ActiveManager::getInstance()->destroyConnection(connectionId);
 		readersWriters.writerUnlock();
 		return returnValue;
@@ -520,6 +592,9 @@ bool ActiveInterface::destroyConnection(std::string& connectionId) throw (Active
 		logMessage << "ActiveInterface::destroyConnection. Exception " <<
 				connectionId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception destroying connection. Check logs.");
@@ -534,10 +609,10 @@ bool ActiveInterface::destroyLink(std::string& linkId) throw (ActiveException){
 	bool returnValue=false;
 	std::stringstream logMessage;
 	try{
-		readersWriters.writerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.writerLock();
 		returnValue=ActiveManager::getInstance()->destroyLink(linkId);
 		readersWriters.writerUnlock();
 		return returnValue;
@@ -546,6 +621,9 @@ bool ActiveInterface::destroyLink(std::string& linkId) throw (ActiveException){
 		logMessage << "ActiveInterface::destroyLink. Exception " <<
 				linkId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception destroying links. Check logs.");
@@ -560,10 +638,10 @@ bool ActiveInterface::destroyService(std::string& serviceId) throw (ActiveExcept
 	bool returnValue=false;
 	std::stringstream logMessage;
 	try{
-		readersWriters.writerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.writerLock();
 		returnValue=ActiveManager::getInstance()->destroyService(serviceId);
 		readersWriters.writerUnlock();
 		return returnValue;
@@ -572,6 +650,9 @@ bool ActiveInterface::destroyService(std::string& serviceId) throw (ActiveExcept
 		logMessage << "ActiveInterface::destroyService. Exception " <<
 				serviceId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception destroying services. Check logs.");
@@ -588,10 +669,10 @@ bool ActiveInterface::destroyServiceLink (	std::string& linkId,
 	bool returnValue=false;
 	std::stringstream logMessage;
 	try{
-		readersWriters.writerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.writerLock();
 		returnValue=ActiveManager::getInstance()->destroyServiceLink(linkId, serviceId);
 		readersWriters.writerUnlock();
 		return returnValue;
@@ -600,6 +681,9 @@ bool ActiveInterface::destroyServiceLink (	std::string& linkId,
 		logMessage << "ActiveInterface::destroyServiceLink. Exception " <<
 				linkId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception destroying service-links. Check logs.");
@@ -614,10 +698,10 @@ bool ActiveInterface::destroyLinkConnection (std::string& linkId) throw (ActiveE
 	bool returnValue=false;
 	std::stringstream logMessage;
 	try{
-		readersWriters.writerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.writerLock();
 		returnValue=ActiveManager::getInstance()->destroyLinkConnection(linkId);
 		readersWriters.writerUnlock();
 		return returnValue;
@@ -626,6 +710,9 @@ bool ActiveInterface::destroyLinkConnection (std::string& linkId) throw (ActiveE
 		logMessage << "ActiveInterface::destroyLinkConnection. Exception " <<
 				linkId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception destroying link-connections. Check logs.");
@@ -642,10 +729,10 @@ bool ActiveInterface::setLinkConnection(std::string& linkId,
 	bool returnValue=false;
 	std::stringstream logMessage;
 	try{
-		readersWriters.writerLock();
 		if (getState()!=INITIALIZED){
-			throw ActiveException("ActiveInterface Library is not initialized. Connection to broker fails?");
+			AI_THROW_AIE;
 		}
+		readersWriters.writerLock();
 		returnValue=ActiveManager::getInstance()->setLinkConnection(linkId, connectionId);
 		readersWriters.writerUnlock();
 		return returnValue;
@@ -654,6 +741,9 @@ bool ActiveInterface::setLinkConnection(std::string& linkId,
 		logMessage << "ActiveInterface::addLinkConnection. Exception " <<
 				linkId << " " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
 	}catch (...){
 		readersWriters.writerUnlock();
 		logMessage.str("Unknown exception getting connections. Check logs.");
@@ -669,11 +759,18 @@ bool ActiveInterface::shutdown() throw (ActiveException){
 	try{
 		logMessage << "ActiveInterface::shutdown. Shutting down singleton manager. ";
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
 		readersWriters.writerLock();
+
+		//setting the flag that the library is closed for the user part
 		setState(CLOSING);
 		//deleting active manager
 		delete ActiveManager::getInstance();
+		//State to closed
 		setState(CLOSED);
+
 		readersWriters.writerUnlock();
 	}catch (ActiveException& ae){
 		readersWriters.writerUnlock();

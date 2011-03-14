@@ -84,4 +84,7 @@
 #define CLOSING 3
 #define CLOSED 4
 
+//throw activeInputException
+#define AI_THROW_AIE throw ActiveInputException("ActiveInterface Library is not initialized. You should initialize it before any operation.");
+
 #endif /* DEFINES_H_ */

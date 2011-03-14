@@ -148,6 +148,16 @@ namespace ai{
 		int congestionControl(long long messagesReady);
 
 		/**
+		 * Method to end the producer thread
+		 */
+		void endThread();
+
+		/**
+		 * Method to stop the thread
+		 */
+		void stop();
+
+		/**
 		 * Default destructor
 		 */
 		virtual ~ActiveProducerThread();

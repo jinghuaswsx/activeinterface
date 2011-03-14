@@ -281,7 +281,7 @@ void ActiveManager::sendResponse (std::string& connectionId, ActiveMessage& acti
 					LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 				}
 			}else{
-				logMessage << "ActiveManager::sendData. Error connection is not ready or is not a producer. ";
+				logMessage << "ActiveManager::sendResponse. Error connection is not with RR. ";
 				throw ActiveException(logMessage.str());
 			}
 		}
@@ -1000,7 +1000,13 @@ void ActiveManager::onMessageCallback (ActiveMessage& activeMessage){
 
 	messageSerializer.lock();
 	if (activeInterfacePtr!=NULL){
-		activeInterfacePtr->onMessage(activeMessage);
+		try{
+			activeInterfacePtr->onMessage(activeMessage);
+		}catch(...){
+			//protecting user error
+			LOG4CXX_DEBUG(logger,"ERROR handling the message by the user, protecting it!");
+			messageSerializer.unlock();
+		}
 	}else{
 		logMessage << "ActiveManager::onMessageCallback. Callback is null";
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());

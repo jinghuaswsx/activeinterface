@@ -80,10 +80,10 @@ static void* APR_THREAD_FUNC callbackThread(apr_thread_t *thd, void *data){
 			while(true){
 
 				apr_thread_mutex_lock(mySharedObject->getMutex());
-				while (mySharedObject->getCallbacksReady() == 0) {
+				while (mySharedObject->getCallbacksReady() == 0 && !mySharedObject->getEndThread()) {
 					apr_thread_cond_wait(mySharedObject->getCond(), mySharedObject->getMutex());
 				}
-				if (mySharedObject->getCallbacksReady()==-1){
+				if (mySharedObject->getEndThread()){
 					break;
 				}
 
@@ -349,7 +349,6 @@ void ActiveCallbackThread::throwOnQueueReady(ActiveCallbackObject& activeCallbac
 		logMessage << "ERROR: Thread couldn't be joined. Perhaps threads are being enqueued.";
 		LOG4CXX_ERROR(logger,logMessage.str().c_str());
 	}
-
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -358,9 +357,23 @@ void ActiveCallbackThread::logIt (std::stringstream& logMessage){
 	logMessage.str("");
 }
 
+void ActiveCallbackThread::endThread(){
+	apr_thread_mutex_lock(activeSharedObject.getMutex());
+	activeSharedObject.setEndThread();
+	apr_thread_cond_signal(activeSharedObject.getCond());
+	apr_thread_mutex_unlock(activeSharedObject.getMutex());
+}
+
+void ActiveCallbackThread::stop(){
+	LOG4CXX_DEBUG (logger,"Stopping callback thread");
+	endThread();
+	LOG4CXX_DEBUG (logger,"Stopped callback thread succesfully!.");
+}
+
 ActiveCallbackThread::~ActiveCallbackThread() {
 	if (threadRunning==APR_SUCCESS){
-		newCallback(false);
+		LOG4CXX_DEBUG (logger,"Exiting callback thread.");
 		apr_thread_join(&rv, thd_main);
+		LOG4CXX_DEBUG (logger,"Exited callback thread succesfully!.");
 	}
 }

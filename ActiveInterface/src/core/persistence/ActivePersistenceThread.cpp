@@ -69,10 +69,10 @@ static void* APR_THREAD_FUNC persistenceThread(apr_thread_t *thd, void *data){
 		ActiveSharedObject* mySharedObject=((ActivePersistenceThread*)data)->getActiveSharedObject();
 		while(true){
 			apr_thread_mutex_lock(mySharedObject->getMutex());
-			while (mySharedObject->getMessagesReady() == 0) {
+			while (mySharedObject->getMessagesReady() == 0 && !mySharedObject->getEndThread()) {
 				apr_thread_cond_wait(mySharedObject->getCond(), mySharedObject->getMutex());
 			}
-			if (mySharedObject->getMessagesReady()==-1){
+			if (mySharedObject->getEndThread()){
 				break;
 			}
 
@@ -116,28 +116,30 @@ void ActivePersistenceThread::newMessage(bool received){
 	}
 }
 
-void ActivePersistenceThread::resetMessages(){
-
-	try{
-		apr_thread_mutex_lock(activeSharedObject.getMutex());
-		activeSharedObject.resetMessages();
-		std::cout << "messages to 0 " << activeSharedObject.getMessagesReady() << std::endl;
-		apr_thread_cond_signal(activeSharedObject.getCond());
-		apr_thread_mutex_unlock(activeSharedObject.getMutex());
-	}catch (...){
-		throw ActiveException ("Unknown exception with semaphore in persistence queue.");
-	}
+void ActivePersistenceThread::endThread(){
+	apr_thread_mutex_lock(activeSharedObject.getMutex());
+	activeSharedObject.setEndThread();
+	apr_thread_cond_signal(activeSharedObject.getCond());
+	apr_thread_mutex_unlock(activeSharedObject.getMutex());
 }
-
 
 void ActivePersistenceThread::logIt (std::stringstream& logMessage){
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
 	logMessage.str("");
 }
 
+void ActivePersistenceThread::stop(){
+	LOG4CXX_DEBUG (logger,"Stopping persistence thread");
+	if (threadRunning==APR_SUCCESS){
+		endThread();
+	}
+	LOG4CXX_DEBUG (logger,"Stopped persistence thread succesfully!.");
+}
+
 ActivePersistenceThread::~ActivePersistenceThread() {
 	if (threadRunning==APR_SUCCESS){
-		newMessage(false);
+		LOG4CXX_DEBUG (logger,"Exiting persistence thread.");
 		apr_thread_join(&rv, thd_arr);
+		LOG4CXX_DEBUG (logger,"Exited persistence thread succesfully!.");
 	}
 }

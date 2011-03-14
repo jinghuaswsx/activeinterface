@@ -105,7 +105,6 @@ void ActiveConsumer::init(){
     	activeQueue.init(getMaxSizeQueue());
     	//initiaing thread to send from queue
     	activeThread.init(this);
-    	activeThread.runSendThread();
     }
 
     //initializing ssl support
@@ -186,16 +185,21 @@ void ActiveConsumer::run() 	throw (ActiveException){
 			consumer = session->createConsumer( destination, getSelector() );
 		}
 
-		//Connection is running
-		setState(CONNECTION_RUNNING);
-
 		// where Im going to catch messages
 		//consumer->setMessageListener( this );
 		//defining this to catch exceptions on transport layer
 		connection->setExceptionListener(this);
 
+		//Connection is running
+		setState(CONNECTION_RUNNING);
+
 		//starting the consumer thread
 		activeConsumerThread.runThread();
+
+	    if (getRequestReply()){
+	    	//starting the producer thread
+	    	activeThread.runSendThread();
+	    }
 
 		logMessage.str("");
 		logMessage << "ActiveConsumer::run. Consumer is started succesfully: "<< getId();
@@ -225,111 +229,106 @@ int ActiveConsumer::onReceive(){
 
 			ActiveMessage activeMessage;
 			activeMessage.setConnectionId(getId());
-			//if the connection is running go ahead else sleep
-			if (getState()==CONNECTION_RUNNING){
-				std::auto_ptr<Message> message( consumer->receive() );
-				if (message.get()!=NULL){
-					////////////////////////////////////////////////////////////////////
-					/// Active message
-					if (message->getCMSType()=="ActiveMessage"){
-							StreamMessage* streamMessage=(StreamMessage*)message.get();
-							sizePacket=streamMessage->readBytes(packetDesc);
-							if (sizePacket!=-1){
-								for (int it=0; it<sizePacket;it++){
-									switch (packetDesc[it]){
-									case ACTIVE_INT_PARAMETER:{
-										std::string key=streamMessage->readString();
-										int value=streamMessage->readInt();
-										activeMessage.insertIntParameter(key,value);
-									}
-									break;
-									case ACTIVE_REAL_PARAMETER:{
-										std::string key=streamMessage->readString();
-										float value=streamMessage->readFloat();
-										activeMessage.insertRealParameter(key,value);
-									}
-									break;
-									case ACTIVE_STRING_PARAMETER:{
-										std::string key=streamMessage->readString();
-										std::string value=streamMessage->readString();
-										activeMessage.insertStringParameter(key,value);
-									}
-									break;
-									case ACTIVE_BYTES_PARAMETER:{
-										std::string key=streamMessage->readString();
-										int sizeBytesData=packetDesc.at(++it);
-										std::vector<unsigned char> data(sizeBytesData);
-										streamMessage->readBytes(data);
-										streamMessage->readBytes(data);
-										activeMessage.insertBytesParameter(key,data);
-									}
-									break;
-									case ACTIVE_INT_PROPERTY:{
-										std::string key=streamMessage->readString();
-										int value=streamMessage->getIntProperty(key);
-										activeMessage.insertIntProperty(key,value);
-									}
-									break;
-									case ACTIVE_REAL_PROPERTY:{
-										std::string key=streamMessage->readString();
-										float value=streamMessage->getFloatProperty(key);
-										activeMessage.insertRealProperty(key,value);
-									}
-									break;
-									case ACTIVE_STRING_PROPERTY:{
-										std::string key=streamMessage->readString();
-										std::string value=streamMessage->getStringProperty(key);
-										activeMessage.insertStringProperty(key,value);
-									}
-									break;
-									}
-								}
-							}else{
-								logMessage << "Consumer::onMessage. Exceptions ocurred when message received. Packet description error";
-								LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+			std::auto_ptr<Message> message( consumer->receive() );
+
+			if (message.get()!=NULL){
+				////////////////////////////////////////////////////////////////////
+				/// Active message
+				if (message->getCMSType()=="ActiveMessage"){
+					StreamMessage* streamMessage=(StreamMessage*)message.get();
+					sizePacket=streamMessage->readBytes(packetDesc);
+					if (sizePacket!=-1){
+						for (int it=0; it<sizePacket;it++){
+							switch (packetDesc[it]){
+							case ACTIVE_INT_PARAMETER:{
+								std::string key=streamMessage->readString();
+								int value=streamMessage->readInt();
+								activeMessage.insertIntParameter(key,value);
 							}
-						/////////////////////////////////////////////////////////////
-						// text message
-						}else{
-							TextMessage* textMessage=(TextMessage*)message.get();
-							std::string textReceived=textMessage->getText();
-							activeMessage.setText(textReceived);
-							activeMessage.setMessageAsText();
-							loadProperties(textMessage,activeMessage);
-						}
-
-						logMessage << "Message received from connection "<< getId() << std::endl;
-						LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-
-						//inserting in message if i can answer if is a request reply consumer
-						if (getRequestReply()){
-							//setting parameter for how to make the answer
-							activeMessage.setRequestReply(true);
-							//Set the correlation ID from the received message
-							std::string corId=message->getCMSCorrelationID();
-							activeMessage.setCorrelationId(corId);
-							//setting requestReply destination
-							activeMessage.cloneDestination(message->getCMSReplyTo());
-						}
-
-						//setting others parameters to the message
-						activeMessage.setLinkId(getLinkId());
-						//sending callback to user with message
-						ActiveManager::getInstance()->onMessageCallback(activeMessage);
-
-						//message read sending acknowledge
-						if( getClientAck() ) {
-							message->acknowledge();
+							break;
+							case ACTIVE_REAL_PARAMETER:{
+								std::string key=streamMessage->readString();
+								float value=streamMessage->readFloat();
+								activeMessage.insertRealParameter(key,value);
+							}
+							break;
+							case ACTIVE_STRING_PARAMETER:{
+								std::string key=streamMessage->readString();
+								std::string value=streamMessage->readString();
+								activeMessage.insertStringParameter(key,value);
+							}
+							break;
+							case ACTIVE_BYTES_PARAMETER:{
+								std::string key=streamMessage->readString();
+								int sizeBytesData=packetDesc.at(++it);
+								std::vector<unsigned char> data(sizeBytesData);
+								streamMessage->readBytes(data);
+								streamMessage->readBytes(data);
+								activeMessage.insertBytesParameter(key,data);
+							}
+							break;
+							case ACTIVE_INT_PROPERTY:{
+								std::string key=streamMessage->readString();
+								int value=streamMessage->getIntProperty(key);
+								activeMessage.insertIntProperty(key,value);
+							}
+							break;
+							case ACTIVE_REAL_PROPERTY:{
+								std::string key=streamMessage->readString();
+								float value=streamMessage->getFloatProperty(key);
+								activeMessage.insertRealProperty(key,value);
+							}
+							break;
+							case ACTIVE_STRING_PROPERTY:{
+								std::string key=streamMessage->readString();
+								std::string value=streamMessage->getStringProperty(key);
+								activeMessage.insertStringProperty(key,value);
+							}
+							break;
+							}
 						}
 					}else{
-						///////////////////////////////////////////////////////////////
-						logMessage << "Message received was null "<< getId();
+						logMessage << "Consumer::onMessage. Exceptions ocurred when message received. Packet description error";
 						LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 					}
-			}else{
-				logMessage << "Consumer::onMessage. Connection " << getId() << "is interrupted waiting for consuming again";
+
+				/////////////////////////////////////////////////////////////
+				// text message
+				}else{
+					TextMessage* textMessage=(TextMessage*)message.get();
+					std::string textReceived=textMessage->getText();
+					activeMessage.setText(textReceived);
+					activeMessage.setMessageAsText();
+					loadProperties(textMessage,activeMessage);
+				}
+
+				logMessage << "Message received from connection "<< getId() << std::endl;
 				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-				apr_sleep(3000000);
+
+				//inserting in message if i can answer if is a request reply consumer
+				if (getRequestReply()){
+					//setting parameter for how to make the answer
+					activeMessage.setRequestReply(true);
+					//Set the correlation ID from the received message
+					std::string corId=message->getCMSCorrelationID();
+					activeMessage.setCorrelationId(corId);
+					//setting requestReply destination
+					activeMessage.cloneDestination(message->getCMSReplyTo());
+				}
+
+				//setting others parameters to the message
+				activeMessage.setLinkId(getLinkId());
+				//sending callback to user with message
+				ActiveManager::getInstance()->onMessageCallback(activeMessage);
+
+				//message read sending acknowledge
+				if( getClientAck() ) {
+					message->acknowledge();
+				}
+			}else{
+				///////////////////////////////////////////////////////////////
+				logMessage << "Message received was null "<< getId();
+				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 			}
 			//clearing all
 			logMessage.str("");
@@ -402,38 +401,38 @@ int ActiveConsumer::deliver (ActiveMessage& activeMessageR)	throw (ActiveExcepti
 
 	std::stringstream logMessage;
 	try{
-		//setting the connection id to the message to be marked
-		activeMessageR.setConnectionId(getId());
 
 		//if connection is running accepting messages into the queue
-		if (getState()!=CONNECTION_CLOSED){
-
-			//enqueue the message
-			int position=activeQueue.enqueue(activeMessageR);
-			//checking if is enqueded or not
-			if (position==-1){
-				//preparing to make the callback
-				ActiveCallbackObject activeCallbackObject(	ON_PACKET_DROPPED,
-															getId(),
-															activeMessageR);
-				activeCallbackQueue.enqueue(activeCallbackObject);
-				activeCallbackThread.newCallback(true);
-
-				activeQueue.setWorkingState(false);
-
-				logMessage << "POSSIBLE DATA LOSS. Message could not be inserted in the queue ";
-				LOG4CXX_ERROR(logger, logMessage.str().c_str());
-			}else{
-				activeThread.newMessage(true);
-				logMessage << "New response sent.";
-				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-			}
-			return position;
-		}else{
+		if (getState()==CONNECTION_CLOSED){
 			logMessage << "ERROR: Consumer connection "<< getId() << " was closed.";
 			LOG4CXX_ERROR(logger, logMessage.str().c_str());
 			return -1;
 		}
+
+		//setting the connection id to the message to be marked
+		activeMessageR.setConnectionId(getId());
+
+		//enqueue the message
+		int position=activeQueue.enqueue(activeMessageR);
+		//checking if is enqueded or not
+		if (position==-1){
+			//preparing to make the callback
+			ActiveCallbackObject activeCallbackObject(	ON_PACKET_DROPPED,
+														getId(),
+														activeMessageR);
+			activeCallbackQueue.enqueue(activeCallbackObject);
+			activeCallbackThread.newCallback(true);
+
+			activeQueue.setWorkingState(false);
+
+			logMessage << "POSSIBLE DATA LOSS. Message could not be inserted in the queue ";
+			LOG4CXX_ERROR(logger, logMessage.str().c_str());
+		}else{
+			activeThread.newMessage(true);
+			logMessage << "New response sent.";
+			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+		}
+		return position;
 
 	}catch(ActiveException e){
 		logMessage << "POSIBLE LOSS OF DATA. Consumer could not enqueue response message "<< e.getMessage();
@@ -449,11 +448,18 @@ int ActiveConsumer::send(){
 	std::stringstream logMessage;
 
 	try{
+		if (getState()==CONNECTION_CLOSED){
+			activeThread.newMessage(false);
+			logMessage << "Consumer::send. POSSIBLE DATA LOSS. Producer " << getId() << " is closed. Send is not possible. Persistence is On?";
+			LOG4CXX_ERROR(logger, logMessage.str().c_str());
+			return -1;
+		}
+
 		ActiveMessage activeMessageToSend;
 		activeQueue.dequeue(activeMessageToSend);
 		activeThread.newMessage(false);
 
-		if (replyProducer != NULL || connection != NULL || session != NULL || destination != NULL || getState()!=CONNECTION_RUNNING){
+		if (replyProducer != NULL || connection != NULL || session != NULL || destination != NULL){
 
 			if (activeMessageToSend.isTextMessage()){
 				//sending a textMessage
@@ -660,9 +666,6 @@ void ActiveConsumer::onException( const CMSException& ex ) {
 void ActiveConsumer::transportInterrupted() {
 	std::stringstream logMessage;
 	try{
-		//setting the state to interrupted
-		setState(CONNECTION_INTERRUPTED);
-
 		logMessage << "Producer::transportInterrupted. The Connection's Transport has been interrupted."<< getClientId();
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		//making the object
@@ -681,9 +684,6 @@ void ActiveConsumer::transportInterrupted() {
 void ActiveConsumer::transportResumed() {
 	std::stringstream logMessage;
 	try{
-		//coming back to normal state
-		setState(CONNECTION_RUNNING);
-
 		logMessage << "Producer::transportResumed. The Connection's Transport has been Restored."<< getClientId();
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		//making the object
@@ -805,9 +805,6 @@ void ActiveConsumer::cleanup(){
 }
 
 void ActiveConsumer::close() {
-	//setting state
-	setState(CONNECTION_CLOSED);
-
 	std::stringstream logMessage;
 	logMessage << "Consumer::close. Closing consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination()<< "...";
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
@@ -816,10 +813,16 @@ void ActiveConsumer::close() {
 }
 
 ActiveConsumer::~ActiveConsumer(){
+	//setting state to close
+	setState(CONNECTION_CLOSED);
 	//deletint the references to this connection
 	ActiveManager::getInstance()->removeLinkBindingTo(getId());
 	//closing the consumer thread
 	endConsumerThread();
+	//ending the producer thread
+	activeThread.stop();
+	//ending the callback thread
+	activeCallbackThread.stop();
 	//closing consumer
 	close();
 }

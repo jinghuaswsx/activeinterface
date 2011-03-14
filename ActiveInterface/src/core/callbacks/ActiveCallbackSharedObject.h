@@ -48,6 +48,12 @@ namespace ai {
 		 */
 		long long callbacksReady;
 
+		/**
+		 * flag to end thread
+		 */
+		bool endThread;
+
+
 	public:
 		/**
 		 * Default constructor
@@ -55,6 +61,7 @@ namespace ai {
 		ActiveCallbackSharedObject(){ 	mutex=NULL;
 										cond=NULL;
 										callbacksReady=0;
+										endThread=false;
 		}
 
 		/**
@@ -101,6 +108,16 @@ namespace ai {
 		 * Method that decrements the number of messages ready to send
 		 */
 		void callbackDone(){ callbacksReady--;}
+
+		/**
+		 * method to end the thread
+		 */
+		void setEndThread(){ endThread=true;}
+
+		/**
+		 * method to know when the thread needs to dead
+		 */
+		bool getEndThread(){ return endThread;}
 
 		/**
 		 * Default destructor

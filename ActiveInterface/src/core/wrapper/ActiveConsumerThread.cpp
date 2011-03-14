@@ -26,6 +26,12 @@
 
 using namespace ai;
 
+using namespace log4cxx;
+using namespace log4cxx::helpers;
+
+LoggerPtr ActiveConsumerThread::logger(Logger::getLogger("ActiveConsumerThread"));
+
+
 ActiveConsumerThread::ActiveConsumerThread() {
 	//initializing attributes
 	threadRunning=-1;
@@ -82,6 +88,8 @@ int ActiveConsumerThread::runThread (){
 
 ActiveConsumerThread::~ActiveConsumerThread() {
 	if (threadRunning==APR_SUCCESS){
+		LOG4CXX_DEBUG (logger,"Exiting consumer thread.");
 		apr_thread_join(&rv, thd_arr);
+		LOG4CXX_DEBUG (logger,"Consumer thread exited!.")
 	}
 }

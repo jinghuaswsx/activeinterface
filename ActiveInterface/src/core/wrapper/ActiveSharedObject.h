@@ -48,6 +48,11 @@ namespace ai{
 		 */
 		long long messagesReady;
 
+		/**
+		 * flag to end thread
+		 */
+		bool endThread;
+
 	public:
 		/**
 		 * Default constructor
@@ -55,6 +60,7 @@ namespace ai{
 		ActiveSharedObject(){ 	mutex=NULL;
 								cond=NULL;
 								messagesReady=0;
+								endThread=false;
 		}
 
 		/**
@@ -109,9 +115,14 @@ namespace ai{
 		void messageSent(){ messagesReady--;}
 
 		/**
-		 * method to reset a 0 the number of messages ready to send
+		 * method to end the thread
 		 */
-		void resetMessages(){ messagesReady=0;}
+		void setEndThread(){ endThread=true;}
+
+		/**
+		 * method to know when the thread needs to dead
+		 */
+		bool getEndThread(){ return endThread;}
 
 		/**
 		 * Default destructor

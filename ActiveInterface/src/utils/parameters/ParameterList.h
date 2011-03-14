@@ -56,6 +56,12 @@ namespace ai{
 	private:
 
 		/**
+		 * Identificator of thhe parameterList. Could be used to identify
+		 * a Parameterlist if you have more than one
+		 */
+		std::string id;
+
+		/**
 		 * Maps for saving polimorphic parameters with a key associated
 		 */
 		std::map <std::string,Parameter*> parametersMap;
@@ -194,6 +200,18 @@ namespace ai{
 		Parameter* get(int index, std::string& key) const;
 
 		/**
+		 * Method that returns the id of the parameter list
+		 * @return id of the parameter list
+		 */
+		const std::string& getId() const { return id;}
+
+		/**
+		 * Method that sets the id of the parameter list
+		 * @param idR id of the parameterlist.
+		 */
+		void setId (std::string& idR){ id=idR;}
+
+		/**
 		 * Clear all parameters stored in the parameter list.
 		 */
 		void clear();
@@ -209,7 +227,7 @@ namespace ai{
 		/**
 		 * Default constructor
 		 */
-		ParameterList(){}
+		ParameterList(const std::string& idR=""){id=idR;}
 
 		/**
 		 * Copy constructor
@@ -235,6 +253,7 @@ namespace ai{
 			ar.template register_type<BytesParameter>();
 			ar.template register_type<IntParameter>();
 			ar & parametersMap;
+			ar & id;
 		}
 	};
   }

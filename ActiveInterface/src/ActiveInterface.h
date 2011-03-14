@@ -54,13 +54,22 @@ namespace ai{
 		 * Method that startup the library and creates all needed structures. It should be called
 		 * before using it.
 		 *
+		 * NOTE: You should run this method in the main thread because its necesary.
+		 *
 		 * @param configurationFile FileName for the configuration file. By default will be
 		 * ActiveConfiguration.xml
 		 *
 		 * @throws ActiveException with description
 		 */
-		void startup(const std::string& configurationFile="ActiveConfiguration.xml")
+		void init(const std::string& configurationFile="ActiveConfiguration.xml")
 			throw ( ActiveException );
+
+		/**
+		 * Method that starts all connection with broker, could be blocking if you want or not
+		 *
+		 * @throws ActiveException with description
+		 */
+		void startup() throw ( ActiveException );
 
 		/**
 		 * Method that send active message to a specific service id
@@ -99,7 +108,6 @@ namespace ai{
 		 */
 		void sendResponse (	std::string& connectionId,
 							ActiveMessage& activeMessage) throw (ActiveException);
-
 
 		/**
 		 * Method that creates a new JMS Producer
@@ -427,20 +435,20 @@ namespace ai{
 		 */
 		static log4cxx::LoggerPtr logger;
 
-		/**
-		 * state of the library
-		 */
-		int state;
+        /**
+         * state of the library
+         */
+        int state;
 
-		/**
-		 * getter of the state of the library
-		 */
-		int getState(){ return state;}
+        /**
+         * getter of the state of the library
+         */
+        int getState(){ return state;}
 
-		/**
-		 * setter of the state of the library
-		 */
-		void setState(int stateR) { state=stateR;}
+        /**
+         * setter of the state of the library
+         */
+        void setState(int stateR) { state=stateR;}
 
 		/**
 		 * Class that implements the reader & writer thread safe method to

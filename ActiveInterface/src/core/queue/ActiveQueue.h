@@ -153,7 +153,7 @@ namespace ai{
 		/**
 		 * method to get the actual size of the queue
 		 */
-		long getSizeQueue (){return messageQueue.size();}
+		unsigned int getSizeQueue (){return messageQueue.size();}
 
 		/**
 		 * Default destructor

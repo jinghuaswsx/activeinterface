@@ -35,9 +35,13 @@
 #endif
 
 #include <boost/serialization/base_object.hpp>
+#include <map>
+#include <string>
 
 namespace ai{
  namespace utils{
+
+	class ParameterList;
 
 	class ACTIVEINTERFACE_API Parameter {
 
@@ -50,6 +54,11 @@ namespace ai{
 		 * 3 - bytes
 		 */
 		int type;
+
+		/**
+		 * params of params?
+		 */
+		//ParameterList* parameterList;
 
 	public:
 		/**
@@ -79,6 +88,16 @@ namespace ai{
 		 * @return Integer to know which type is the parameter
 		 */
 		int getType () const { return type;}
+
+		/**
+		 * Method to get the reference to the param of param
+		 */
+		//ParameterList* getParameterList (){ return parameterList;}
+
+		/**
+		 * Method to set the reference to the parameterList
+		 */
+		//void setParameterList(ParameterList* parameterListR){ parameterList=parameterListR;}
 
 		/**
 		 * Default destructor

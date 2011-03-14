@@ -186,6 +186,16 @@ namespace ai{
 		void logIt (std::stringstream& logMessage);
 
 		/**
+		 * Method to end the thread
+		 */
+		void endThread();
+
+		/**
+		 * Method to stop the thread
+		 */
+		void stop();
+
+		/**
 		 * Default destructor
 		 */
 		virtual ~ActiveCallbackThread();

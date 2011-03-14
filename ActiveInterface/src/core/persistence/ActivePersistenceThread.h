@@ -138,9 +138,14 @@ namespace ai{
 		void newMessage(bool receive);
 
 		/**
-		 *	Method used to reset the messages that are going to be spawned.
+		 * Method to end the thread
 		 */
-		void resetMessages();
+		void endThread();
+
+		/**
+		 * Method to stop the thread
+		 */
+		void stop();
 
 		/**
 		 *	Default destructor

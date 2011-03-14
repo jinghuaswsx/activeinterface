@@ -59,6 +59,11 @@ public:
 	 * @return exception message
 	 */
 	const std::string& getMessage() { return cause;}
+
+	/**
+	 * Virtual destructor
+	 */
+	virtual ~ActiveException(){}
 };
 
 #endif /* ACTIVEEXCEPTION_H_ */

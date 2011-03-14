@@ -77,10 +77,10 @@ static void* APR_THREAD_FUNC sendThread(apr_thread_t *thd, void *data){
 		//while (!((ActiveProducerThread*)data)->getKillThread()){
 		while(true){
 			apr_thread_mutex_lock(mySharedObject->getMutex());
-			while (mySharedObject->getMessagesReady() == 0) {
+			while (mySharedObject->getMessagesReady() == 0 && !mySharedObject->getEndThread()) {
 				apr_thread_cond_wait(mySharedObject->getCond(), mySharedObject->getMutex());
 			}
-			if (mySharedObject->getMessagesReady()==-1){
+			if (mySharedObject->getEndThread()){
 				break;
 			}
 
@@ -95,7 +95,7 @@ static void* APR_THREAD_FUNC sendThread(apr_thread_t *thd, void *data){
 		apr_thread_exit(thd, APR_SUCCESS);
 		return NULL;
 	}else{
-		throw ActiveException ("Failed communication with cms. Producer thread can not send.");
+		std::cout << "Failed communication with cms. Producer thread can not send." << std::endl;
 	}
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -119,15 +119,30 @@ void ActiveProducerThread::newMessage(bool received){
 	apr_thread_mutex_unlock(activeSharedObject.getMutex());
 }
 
+void ActiveProducerThread::endThread(){
+	apr_thread_mutex_lock(activeSharedObject.getMutex());
+	activeSharedObject.setEndThread();
+	apr_thread_cond_signal(activeSharedObject.getCond());
+	apr_thread_mutex_unlock(activeSharedObject.getMutex());
+}
+
 void ActiveProducerThread::logIt (std::stringstream& logMessage){
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
 	logMessage.str("");
 }
 
+void ActiveProducerThread::stop(){
+	LOG4CXX_DEBUG (logger,"Stopping producer thread");
+	if (threadRunning==APR_SUCCESS){
+		endThread();
+	}
+	LOG4CXX_DEBUG (logger,"Stopped producer thread succesfully!.");
+}
+
 ActiveProducerThread::~ActiveProducerThread() {
 	if (threadRunning==APR_SUCCESS){
-		newMessage(false);
+		LOG4CXX_DEBUG (logger,"Exiting producer thread.");
 		apr_thread_join(&rv, thd_arr);
+		LOG4CXX_DEBUG (logger,"Exited producer thread succesfully!.");
 	}
-	//apr_terminate();
 }

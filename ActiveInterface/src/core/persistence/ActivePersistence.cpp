@@ -333,7 +333,7 @@ int ActivePersistence::serialize (ActiveMessage& activeMessage){
 				//persistenceFile << std::string("parlaaaaa");
 			}
 			lastWrote++;
-			logMessage << "Object serialized :" << activeMessage.getText() << "in position " << lastWrote;
+			logMessage << "Object serialized :" << activeMessage.getText() << " in position " << lastWrote;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 			//unlocking mutex
 			persistenceMutex.unlock();

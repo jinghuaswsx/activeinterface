@@ -91,13 +91,17 @@ void ActiveProducer::init (){
 
     //initiaing thread to send from queue
     activeThread.init(this);
-    activeThread.runSendThread();
 
     //initializing callback thread
     activeCallbackThread.init(activeCallbackQueue);
     activeCallbackThread.runCallbackThread();
 
     activePersistence.init(*this);
+
+	//method to know if the application crash and
+	//we have to resend messages that was not sent but
+	//was serialized.
+	activePersistence.crashRecovery();
 
     //initializing ssl support
 	#ifdef WITH_SSL
@@ -166,13 +170,11 @@ void ActiveProducer::run() throw (ActiveException){
 		//setting flag state to running
 		setState(CONNECTION_RUNNING);
 
+		//run send thread
+	    activeThread.runSendThread();
+
 		logMessage << "ActiveProducer::run. Producer is started succesfully: "<< getId();
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-
-		//method to know if the application crash and
-		//we have to resend messages that was not sent but
-		//was serialized.
-		activePersistence.crashRecovery();
 
 	} catch (ActiveException& e){
 		//throw exception about this
@@ -202,15 +204,18 @@ int ActiveProducer::send(){
 
 		if (getState()==CONNECTION_CLOSED){
 			activeThread.newMessage(false);
-			logMessage << "Producer::send. POSSIBLE DATA LOSSS. Producer " << getId() << " is closed. Send is not possible. Persistence is On?";
+			activateRecoveryMutex.unlock();
+			logMessage << "Producer::send. POSSIBLE DATA LOSS. Producer " << getId() << " is closed. Send is not possible. Persistence is On?";
 			LOG4CXX_ERROR(logger, logMessage.str().c_str());
 			return -1;
 		}
+
+		activeThread.newMessage(false);
+
 		activeQueue.dequeue(activeMessageToSend);
 		if (activePersistence.getRecoveryMode()){
 			dequeuedInRecovery=true;
 		}
-		activeThread.newMessage(false);
 
 		if (connection != NULL || session != NULL || destination != NULL || producer != NULL){
 
@@ -239,7 +244,7 @@ int ActiveProducer::send(){
 								activeMessageToSend.getPriority(),
 								activeMessageToSend.getTimeToLive());
 
-				if (getState()!=CONNECTION_CLOSED && getState()!=CONNECTION_NOT_INITIATED){
+				if (getState()!=CONNECTION_CLOSED){
 
 					logMessage << "Text message sent from connection "<< getId() << " to queue " << getDestination() << " with:"<<activeMessageToSend.getText();
 					LOG4CXX_DEBUG(logger, logMessage.str().c_str());
@@ -276,10 +281,12 @@ int ActiveProducer::send(){
 				activateRecoveryMutex.unlock();
 
 				//sending message
-				producer->send(streamMessage,getPersistent(),activeMessageToSend.getPriority(),activeMessageToSend.getTimeToLive());
+				producer->send(	streamMessage,
+								getPersistent(),
+								activeMessageToSend.getPriority(),
+								activeMessageToSend.getTimeToLive());
 
-				if (getState()!=CONNECTION_CLOSED && getState()!=CONNECTION_NOT_INITIATED){
-
+				if (getState()!=CONNECTION_CLOSED){
 					isQueueReadyAgain(activeMessageToSend);
 
 					activePersistence.oneMoreSent(dequeuedInRecovery);
@@ -302,7 +309,6 @@ int ActiveProducer::send(){
 			activateRecoveryMutex.unlock();
 			return -1;
 		}
-
 		return 1;
 	}catch ( ActiveException& ae ){
 		//mutex for starting recovery mode
@@ -459,111 +465,104 @@ int ActiveProducer::onReceive(){
 
 			ActiveMessage activeMessage;
 			activeMessage.setConnectionId(getId());
-			//if the connection is running go ahead else sleep
-			if (getState()==CONNECTION_RUNNING){
-				std::auto_ptr<Message> message( responseConsumer->receive() );
-				if (message.get()!=NULL){
-					////////////////////////////////////////////////////////////////////
-					/// Active message
-					if (message->getCMSType()=="ActiveMessage"){
-							StreamMessage* streamMessage=(StreamMessage*)message.get();
-							sizePacket=streamMessage->readBytes(packetDesc);
-							if (sizePacket!=-1){
-								for (int it=0; it<sizePacket;it++){
-									switch (packetDesc[it]){
-									case ACTIVE_INT_PARAMETER:{
-										std::string key=streamMessage->readString();
-										int value=streamMessage->readInt();
-										activeMessage.insertIntParameter(key,value);
-									}
-									break;
-									case ACTIVE_REAL_PARAMETER:{
-										std::string key=streamMessage->readString();
-										float value=streamMessage->readFloat();
-										activeMessage.insertRealParameter(key,value);
-									}
-									break;
-									case ACTIVE_STRING_PARAMETER:{
-										std::string key=streamMessage->readString();
-										std::string value=streamMessage->readString();
-										activeMessage.insertStringParameter(key,value);
-									}
-									break;
-									case ACTIVE_BYTES_PARAMETER:{
-										std::string key=streamMessage->readString();
-										int sizeBytesData=packetDesc.at(++it);
-										std::vector<unsigned char> data(sizeBytesData);
-										streamMessage->readBytes(data);
-										streamMessage->readBytes(data);
-										activeMessage.insertBytesParameter(key,data);
-									}
-									break;
-									case ACTIVE_INT_PROPERTY:{
-										std::string key=streamMessage->readString();
-										int value=streamMessage->getIntProperty(key);
-										activeMessage.insertIntProperty(key,value);
-									}
-									break;
-									case ACTIVE_REAL_PROPERTY:{
-										std::string key=streamMessage->readString();
-										float value=streamMessage->getFloatProperty(key);
-										activeMessage.insertRealProperty(key,value);
-									}
-									break;
-									case ACTIVE_STRING_PROPERTY:{
-										std::string key=streamMessage->readString();
-										std::string value=streamMessage->getStringProperty(key);
-										activeMessage.insertStringProperty(key,value);
-									}
-									break;
-									}
-								}
-							}else{
-								logMessage << "Consumer::onMessage. Exceptions ocurred when message received. Packet description error";
-								LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+			std::auto_ptr<Message> message( responseConsumer->receive() );
+			if (message.get()!=NULL){
+				////////////////////////////////////////////////////////////////////
+				/// Active message
+				if (message->getCMSType()=="ActiveMessage"){
+					StreamMessage* streamMessage=(StreamMessage*)message.get();
+					sizePacket=streamMessage->readBytes(packetDesc);
+					if (sizePacket!=-1){
+						for (int it=0; it<sizePacket;it++){
+							switch (packetDesc[it]){
+							case ACTIVE_INT_PARAMETER:{
+								std::string key=streamMessage->readString();
+								int value=streamMessage->readInt();
+								activeMessage.insertIntParameter(key,value);
 							}
-						/////////////////////////////////////////////////////////////
-						// text message
-						}else{
-							TextMessage* textMessage=(TextMessage*)message.get();
-							std::string textReceived=textMessage->getText();
-							activeMessage.setText(textReceived);
-							activeMessage.setMessageAsText();
-							loadProperties(textMessage,activeMessage);
-						}
-
-						logMessage << "Message received from connection "<< getId() << std::endl;
-						LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-
-						//inserting in message if i can answer if is a request reply consumer
-						if (getRequestReply()){
-							//setting parameter for how to make the answer
-							activeMessage.setRequestReply(true);
-							//Set the correlation ID from the received message
-							std::string corId=message->getCMSCorrelationID();
-							activeMessage.setCorrelationId(corId);
-							//setting requestReply destination
-							activeMessage.cloneDestination(message->getCMSReplyTo());
-						}
-
-						//setting others parameters to the message
-						activeMessage.setLinkId(getLinkId());
-						//sending callback to user with message
-						ActiveManager::getInstance()->onMessageCallback(activeMessage);
-
-						//message read sending acknowledge
-						if( getClientAck() ) {
-							message->acknowledge();
+							break;
+							case ACTIVE_REAL_PARAMETER:{
+								std::string key=streamMessage->readString();
+								float value=streamMessage->readFloat();
+								activeMessage.insertRealParameter(key,value);
+							}
+							break;
+							case ACTIVE_STRING_PARAMETER:{
+								std::string key=streamMessage->readString();
+								std::string value=streamMessage->readString();
+								activeMessage.insertStringParameter(key,value);
+							}
+							break;
+							case ACTIVE_BYTES_PARAMETER:{
+								std::string key=streamMessage->readString();
+								int sizeBytesData=packetDesc.at(++it);
+								std::vector<unsigned char> data(sizeBytesData);
+								streamMessage->readBytes(data);
+								streamMessage->readBytes(data);
+								activeMessage.insertBytesParameter(key,data);
+							}
+							break;
+							case ACTIVE_INT_PROPERTY:{
+								std::string key=streamMessage->readString();
+								int value=streamMessage->getIntProperty(key);
+								activeMessage.insertIntProperty(key,value);
+							}
+							break;
+							case ACTIVE_REAL_PROPERTY:{
+								std::string key=streamMessage->readString();
+								float value=streamMessage->getFloatProperty(key);
+								activeMessage.insertRealProperty(key,value);
+							}
+							break;
+							case ACTIVE_STRING_PROPERTY:{
+								std::string key=streamMessage->readString();
+								std::string value=streamMessage->getStringProperty(key);
+								activeMessage.insertStringProperty(key,value);
+							}
+							break;
+							}
 						}
 					}else{
-						///////////////////////////////////////////////////////////////
-						logMessage << "Message received was null "<< getId();
+						logMessage << "Consumer::onMessage. Exceptions ocurred when message received. Packet description error";
 						LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 					}
-			}else{
-				logMessage << "Consumer::onMessage. Connection " << getId() << "is interrupted waiting for consuming again";
+				/////////////////////////////////////////////////////////////
+				// text message
+				}else{
+					TextMessage* textMessage=(TextMessage*)message.get();
+					std::string textReceived=textMessage->getText();
+					activeMessage.setText(textReceived);
+					activeMessage.setMessageAsText();
+					loadProperties(textMessage,activeMessage);
+				}
+
+				logMessage << "Message received from connection "<< getId() << std::endl;
 				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-				apr_sleep(3000000);
+
+				//inserting in message if i can answer if is a request reply consumer
+				if (getRequestReply()){
+					//setting parameter for how to make the answer
+					activeMessage.setRequestReply(true);
+					//Set the correlation ID from the received message
+					std::string corId=message->getCMSCorrelationID();
+					activeMessage.setCorrelationId(corId);
+					//setting requestReply destination
+					activeMessage.cloneDestination(message->getCMSReplyTo());
+				}
+
+				//setting others parameters to the message
+				activeMessage.setLinkId(getLinkId());
+				//sending callback to user with message
+				ActiveManager::getInstance()->onMessageCallback(activeMessage);
+
+				//message read sending acknowledge
+				if( getClientAck() ) {
+					message->acknowledge();
+				}
+			}else{
+				///////////////////////////////////////////////////////////////
+				logMessage << "Message received was null "<< getId();
+				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 			}
 			//clearing all
 			logMessage.str("");
@@ -641,66 +640,65 @@ int ActiveProducer::deliver (ActiveMessage& activeMessageR, ActiveLink& activeLi
 	try{
 
 		//if connection is running accepting messages into the queue
-		if (getState()!=CONNECTION_CLOSED){
-
-			//setting the connection id to the message to be marked
-			activeMessageR.setConnectionId(getId());
-
-			//copying properties to activemessage from activelink properties
-			//this properties are default properties
-			copyDefaultProperties(activeMessageR,activeLink,defaultPropertysAdd);
-
-			//serializing the object into persistence file
-			activePersistence.serialize(activeMessageR);
-
-			//enqueue the message we are going to return the position in the queue
-			if (!activePersistence.getRecoveryMode()){
-
-				position=activeQueue.enqueue(activeMessageR);
-
-				if (position==-1){
-
-					activateRecoveryMutex.lock();
-
-					//we've lost a packet we have to set library into
-					//recovery mode (persistence on)
-					if (activeQueue.isFull()){
-						activePersistence.startRecoveryMode();						
-						//preparing to make the callback
-						ActiveCallbackObject activeCallbackObject(	ON_PACKET_DROPPED,
-																	getId(),
-																	activeMessageR);
-						activeCallbackQueue.enqueue(activeCallbackObject);
-						activeCallbackThread.newCallback(true);
-
-						activeQueue.setWorkingState(false);
-					}else{
-						if (position==activeQueue.enqueue(activeMessageR)){
-							logMessage.str( "ERROR. POSSIBLE DATA LOSSS. Reenqueuing to the queue was full");
-							LOG4CXX_DEBUG (logger,logMessage.str().c_str());
-						}
-						activePersistence.oneMoreEnqueued();
-						activeThread.newMessage(true);
-					}
-					activateRecoveryMutex.unlock();
-				}else{
-					activePersistence.oneMoreEnqueued();
-					activeThread.newMessage(true);
-					logMessage.str("New message enqueued in connection ");
-					logMessage << getId() << std::endl;
-					LOG4CXX_DEBUG (logger,logMessage.str().c_str());
-				}
-			}
-			//removing default properties
-			removeDefaultProperties(activeMessageR,defaultPropertysAdd);
-		}else{
+		if (getState()==CONNECTION_CLOSED){
 			logMessage << "ERROR: Producer connection "<< getId() << " was closed.";
 			LOG4CXX_ERROR(logger, logMessage.str().c_str());
-
-			removeDefaultProperties(activeMessageR,defaultPropertysAdd);
-
 			return -1;
 		}
+
+		//setting the connection id to the message to be marked
+		activeMessageR.setConnectionId(getId());
+
+		//copying properties to activemessage from activelink properties
+		//this properties are default properties
+		copyDefaultProperties(activeMessageR,activeLink,defaultPropertysAdd);
+
+		//serializing the object into persistence file
+		activePersistence.serialize(activeMessageR);
+
+		//enqueue the message we are going to return the position in the queue
+		if (!activePersistence.getRecoveryMode()){
+
+			position=activeQueue.enqueue(activeMessageR);
+
+			if (position==-1){
+
+				activateRecoveryMutex.lock();
+
+				//we've lost a packet we have to set library into
+				//recovery mode (persistence on)
+				if (activeQueue.isFull()){
+					activePersistence.startRecoveryMode();
+					//preparing to make the callback
+					ActiveCallbackObject activeCallbackObject(	ON_PACKET_DROPPED,
+																getId(),
+																activeMessageR);
+					activeCallbackQueue.enqueue(activeCallbackObject);
+					activeCallbackThread.newCallback(true);
+
+					activeQueue.setWorkingState(false);
+				}else{
+					position=activeQueue.enqueue(activeMessageR);
+					if (position==-1){
+						logMessage.str( "ERROR. POSSIBLE DATA LOSSS. Reenqueuing to the queue was full");
+						LOG4CXX_DEBUG (logger,logMessage.str().c_str());
+					}
+					activePersistence.oneMoreEnqueued();
+					activeThread.newMessage(true);
+					logMessage.str( "Reenqueuing to the queue ok!");
+					LOG4CXX_DEBUG (logger,logMessage.str().c_str());
+				}
+				activateRecoveryMutex.unlock();
+			}else{
+				activePersistence.oneMoreEnqueued();
+				activeThread.newMessage(true);
+				logMessage.str("");
+				logMessage << "New message enqueued in connection " <<getId() << std::endl;
+				LOG4CXX_DEBUG (logger,logMessage.str().c_str());
+			}
+		}
+		//removing default properties
+		removeDefaultProperties(activeMessageR,defaultPropertysAdd);
 		return position;
 
 	}catch(ActiveException e){
@@ -722,6 +720,15 @@ int ActiveProducer::deliver (ActiveMessage& activeMessageR)	throw (ActiveExcepti
 	std::list<std::string> defaultPropertysAdd;
 	int position=-1;
 	try{
+
+		//if connection is running accepting messages into the queue
+		if (getState()==CONNECTION_CLOSED){
+			logMessage << "ERROR: Producer in persistence was enqueuing data to connection "<<
+							getId() << ", but was closed.";
+			LOG4CXX_ERROR(logger, logMessage.str().c_str());
+			return -1;
+		}
+
 		position=activeQueue.enqueue(activeMessageR);
 
 		if (position==-1){
@@ -849,9 +856,6 @@ void ActiveProducer::onException( const CMSException& ex ) {
 void ActiveProducer::transportInterrupted() {
 	std::stringstream logMessage;
 	try{
-		//setting the state to interrupted
-		setState(CONNECTION_INTERRUPTED);
-
 		logMessage << "Producer::transportInterrupted. The Connection's Transport has been interrupted."<< getClientId();
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		//making the object
@@ -897,9 +901,6 @@ void ActiveProducer::isQueueReadyAgain(ActiveMessage& activeMessageR){
 }
 
 void ActiveProducer::close() {
-	//setting state to close
-	setState(CONNECTION_CLOSED);
-
 	std::stringstream logMessage;
 	logMessage << "Producer::close. Closing producer " << getIpBroker() <<" " << getDestination()<< "...";
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
@@ -954,6 +955,17 @@ void ActiveProducer::cleanup(){
 
 		try{
 			logMessage.str("");
+			logMessage << "Producer::deleting response consumer... ";
+			LOG4CXX_INFO(logger, logMessage.str().c_str());
+			if( responseConsumer != NULL ) delete responseConsumer;
+		}catch (CMSException& e) {
+			logMessage << "Producer::cleaning up CMSException: "<<e.what();
+			LOG4CXX_INFO(logger, logMessage.str().c_str());
+		}
+		responseConsumer = NULL;
+
+		try{
+			logMessage.str("");
 			logMessage << "Producer::deleting temporal destination... ";
 			LOG4CXX_INFO(logger, logMessage.str().c_str());
 			if( tempDest != NULL ) delete tempDest;
@@ -982,19 +994,11 @@ void ActiveProducer::cleanup(){
 		}catch ( CMSException& e ) {
 			logMessage << "Producer::cleaning up CMSException: "<<e.what();
 			LOG4CXX_INFO(logger, logMessage.str().c_str());
+		}catch (...){
+			logMessage << "Producer::cleaning up. Unknown exception ocurred!!" << std::endl;
+			LOG4CXX_INFO(logger, logMessage.str().c_str());
 		}
 		connection = NULL;
-
-		try{
-			logMessage.str("");
-			logMessage << "Producer::deleting response consumer... ";
-			LOG4CXX_INFO(logger, logMessage.str().c_str());
-			if( responseConsumer != NULL ) delete responseConsumer;
-		}catch (CMSException& e) {
-			logMessage << "Producer::cleaning up CMSException: "<<e.what();
-			LOG4CXX_INFO(logger, logMessage.str().c_str());
-		}
-		responseConsumer = NULL;
 
 		logMessage.str("");
 		logMessage << "Producer::close. Producer " <<  getId()<< " connected to " << getIpBroker() << " " << getDestination()<< " closed succesfully!";
@@ -1006,11 +1010,18 @@ void ActiveProducer::cleanup(){
 }
 
 ActiveProducer::~ActiveProducer(){
+	//setting state to close
+	setState(CONNECTION_CLOSED);
 	//removing link connected to this producer
 	ActiveManager::getInstance()->removeLinkBindingTo(getId());
 	//ending consumer thread
 	endConsumerThread();
+	//ending the producer thread
+	activeThread.stop();
+	//ending the callback thread
+	activeCallbackThread.stop();
 	//closing producer
 	close();
+
 }
 

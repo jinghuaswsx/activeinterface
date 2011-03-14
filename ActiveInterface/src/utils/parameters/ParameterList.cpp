@@ -37,6 +37,9 @@ void ParameterList::clone(const ParameterList& parameterListR){
 
 	std::string key;
 
+	std::string idAux=parameterListR.getId();
+	setId(idAux);
+
 	for (unsigned int it=0; it<parameterListR.size();it++){
 		Parameter* parameter=parameterListR.get(it,key);
 		switch (parameter->getType()){
