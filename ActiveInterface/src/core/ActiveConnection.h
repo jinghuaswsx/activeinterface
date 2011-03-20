@@ -272,6 +272,12 @@ namespace ai{
 		void setState (int stateR){state=stateR;}
 
 		/**
+		 * virtual method that says if the connection is in recovery mode
+		 * or not
+		 */
+		virtual bool isInRecoveryMode() abstract;
+
+		/**
 		 * Method that initialices the SSL Support.
 		 */
 		void initSSLSupport();

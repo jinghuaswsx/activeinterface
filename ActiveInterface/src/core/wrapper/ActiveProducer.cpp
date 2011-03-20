@@ -746,9 +746,12 @@ int ActiveProducer::deliver (ActiveMessage& activeMessageR)	throw (ActiveExcepti
 			LOG4CXX_ERROR(logger, logMessage.str().c_str());
 
 		}else{
+			//std::cout << "antes del one more enqueued" << std::endl;
 			activePersistence.oneMoreEnqueued();
+			//std::cout << "despues y antes del one more enqueued" << std::endl;
 			activeThread.newMessage(true);
-			logMessage << "Recovered message from "<< activePersistence.getLastSentFromFile() << ". Enqueued.";
+			//std::cout << "despues del newmessage" << std::endl;
+			logMessage << "Recovered message from. Enqueued.";
 			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		}
 
@@ -1016,6 +1019,8 @@ ActiveProducer::~ActiveProducer(){
 	ActiveManager::getInstance()->removeLinkBindingTo(getId());
 	//ending consumer thread
 	endConsumerThread();
+	//ending persistence thread
+	activePersistence.stopThread();
 	//ending the producer thread
 	activeThread.stop();
 	//ending the callback thread

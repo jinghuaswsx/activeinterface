@@ -234,6 +234,11 @@ namespace ai{
 		void resetFiles();
 
 		/**
+		 * stops the persistence thread
+		 */
+		void stopThread();
+
+		/**
 		 *	Default destructor
 		 */
 		virtual ~ActivePersistence();

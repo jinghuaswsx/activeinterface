@@ -91,6 +91,7 @@ void ActivePersistence::init(ActiveConnection& activeConnectionR) {
 
 void ActivePersistence::crashRecovery(){
 
+	long howManyToSend=0;
 	std::stringstream logMessage;
 	try{
 		persistenceMutex.lock();
@@ -107,7 +108,16 @@ void ActivePersistence::crashRecovery(){
 				setRecoveryMode(true);
 				//we are going to send one message for each space
 				//in the queue that we have
-				for (int i=0; i<activeConnection->getMaxSizeQueue();i++){
+				//fix: but if the queue is bigger than the number of messages waiting
+				//we have to calculate how many
+				//for (int i=0; i<activeConnection->getMaxSizeQueue();i++){
+				if (lastWrote-lastSent>activeConnection->getMaxSizeQueue()){
+					howManyToSend=activeConnection->getMaxSizeQueue();
+				}else{
+					howManyToSend=lastWrote-lastSent;
+				}
+				//calculated and dispatching signals
+				for (int i=0; i<howManyToSend; i++ ){
 					newMessage(true);
 				}
 			}else{
@@ -134,7 +144,7 @@ long ActivePersistence::getLastSentFromFile(){
 //			LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 			return lastSentFromFile;
 		}catch (...){
-			logMessage << "Error getting last sent from persistence file. File exists? Recovering from 0.";
+			logMessage << "Error getting last sent from control file. File exists? Recovering from 0.";
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 			return 0;
 		}
@@ -178,6 +188,7 @@ void ActivePersistence::enqueue(){
 		if (isEnabled()){
 			ActiveMessage messageToEnqueue;
 			if (getNextMessage(messageToEnqueue)){
+				//std::cout << "antes del deliver"<< std::endl;
 				if (activeConnection->deliver(messageToEnqueue)!=-1){
 					newMessage(false);
 					logMessage << "Message recovered from "<<getDataFilename();
@@ -187,6 +198,7 @@ void ActivePersistence::enqueue(){
 					logMessage.str("DATA LOSS. Message was rejected by the queue.");
 					LOG4CXX_FATAL (logger,logMessage.str().c_str());
 				}
+				//std::cout << "despues del deliver"<< std::endl;
 			}else{
 				newMessage(false);
 				logMessage << "DATA LOSS. Error reading entry " << lastEnqueue << " from persistence file " << getDataFilename();
@@ -283,6 +295,7 @@ void ActivePersistence::increaseSent()  throw (ActiveException) {
 			std::ofstream ofs (controlFilename.str().c_str(),std::ios::out | std::ios::trunc);
 			boost::archive::text_oarchive controlPersistence(ofs);
 			controlPersistence<< lastSent;
+			//std::cout << "wrote last sent to control file " << lastSent << std::endl;
 		}catch (...){
 			logMessage << "Unknown exception increasing control file of persistence. Disk is full?";
 			throw ActiveException(logMessage.str());
@@ -330,7 +343,6 @@ int ActivePersistence::serialize (ActiveMessage& activeMessage){
 				std::ofstream ofs(dataFilename.str().c_str(), std::ios::binary | std::ios::app);
 				boost::archive::binary_oarchive persistenceFile(ofs);
 				persistenceFile << activeMessage;
-				//persistenceFile << std::string("parlaaaaa");
 			}
 			lastWrote++;
 			logMessage << "Object serialized :" << activeMessage.getText() << " in position " << lastWrote;
@@ -444,6 +456,12 @@ bool ActivePersistence::isEnabled(){
 		return true;
 	}
 	return false;
+}
+
+void ActivePersistence::stopThread(){
+	if (isEnabled()){
+		activePersistenceThread.stop();
+	}
 }
 
 ActivePersistence::~ActivePersistence() {

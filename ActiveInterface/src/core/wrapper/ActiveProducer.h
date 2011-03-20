@@ -315,6 +315,11 @@ namespace ai{
 		void init ();
 
 		/**
+		 * Method to know if persistence is enabled
+		 */
+		bool isInRecoveryMode(){return activePersistence.getRecoveryMode();}
+
+		/**
 		 * Close connections, free resources
 		 */
 		void close();

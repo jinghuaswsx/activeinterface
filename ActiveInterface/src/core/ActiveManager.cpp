@@ -187,7 +187,7 @@ void ActiveManager::sendData(	std::string& serviceId,
 						activeLink->getActiveConnection()->getType()==ACTIVE_PRODUCER_RR ){
 						int result=activeLink->getActiveConnection()->deliver(activeMessage,*activeLink);
 						if (result==-1){
-							if (activeLink->getActiveConnection()->getState()!=CONNECTION_IN_PERSISTENCE){
+							if (!activeLink->getActiveConnection()->isInRecoveryMode()){
 								throw ActiveException("ERROR: Queue is full, or something bad happened. Persistence is not on?");
 							}
 						}
@@ -235,7 +235,7 @@ void ActiveManager::sendData(	std::string& serviceId,
 						int result=activeLink->getActiveConnection()->deliver(activeMessage,*activeLink);
 						positionInQueue.push_front(result);
 						if (result==-1){
-							if (activeLink->getActiveConnection()->getState()!=CONNECTION_IN_PERSISTENCE){
+							if (!activeLink->getActiveConnection()->isInRecoveryMode()){
 								throw ActiveException("ERROR: Queue is full, or something bad happened. Persistence is on?");
 							}
 						}

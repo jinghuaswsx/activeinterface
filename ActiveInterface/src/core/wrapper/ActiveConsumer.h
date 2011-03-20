@@ -276,6 +276,11 @@ namespace ai{
 		void init ();
 
 		/**
+		 * Method to know if persistence is enabled, for consumer there is no recovery mode
+		 */
+		bool isInRecoveryMode(){ return false;}
+
+		/**
 		 * Close connections, free resources
 		 */
 		void close();

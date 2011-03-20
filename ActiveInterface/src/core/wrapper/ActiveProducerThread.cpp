@@ -81,6 +81,7 @@ static void* APR_THREAD_FUNC sendThread(apr_thread_t *thd, void *data){
 				apr_thread_cond_wait(mySharedObject->getCond(), mySharedObject->getMutex());
 			}
 			if (mySharedObject->getEndThread()){
+				apr_thread_mutex_unlock(mySharedObject->getMutex());
 				break;
 			}
 
@@ -96,6 +97,7 @@ static void* APR_THREAD_FUNC sendThread(apr_thread_t *thd, void *data){
 		return NULL;
 	}else{
 		std::cout << "Failed communication with cms. Producer thread can not send." << std::endl;
+		return NULL;
 	}
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +110,7 @@ int ActiveProducerThread::runSendThread (){
 }
 
 void ActiveProducerThread::newMessage(bool received){
-
+	//std::cout << "antes del lock"<< std::endl;
 	apr_thread_mutex_lock(activeSharedObject.getMutex());
 	if (received){
 		activeSharedObject.newMessage();
@@ -116,7 +118,9 @@ void ActiveProducerThread::newMessage(bool received){
 		activeSharedObject.messageSent();
 	}
 	apr_thread_cond_signal(activeSharedObject.getCond());
+	//std::cout << "despues y antes del unlock"<<std::endl;
 	apr_thread_mutex_unlock(activeSharedObject.getMutex());
+	//std::cout << "despues del lock"<<std::endl;
 }
 
 void ActiveProducerThread::endThread(){

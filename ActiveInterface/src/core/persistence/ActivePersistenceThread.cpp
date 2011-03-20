@@ -73,16 +73,20 @@ static void* APR_THREAD_FUNC persistenceThread(apr_thread_t *thd, void *data){
 				apr_thread_cond_wait(mySharedObject->getCond(), mySharedObject->getMutex());
 			}
 			if (mySharedObject->getEndThread()){
+				apr_thread_mutex_unlock(mySharedObject->getMutex());
 				break;
 			}
 
 			apr_thread_mutex_unlock(mySharedObject->getMutex());
 
 			if (mySharedObject->getMessagesReady()>0){
+				//std::cout << "antes del enqueue persistence" << std::endl;
 				myActivePersistence->enqueue();
+				//std::cout << "despues del enqueue persistence" << std::endl;
 			}
 
 		}
+		//std::cout << "Exited persistence thread!!!!!!!!" << std::endl;
 		apr_thread_exit(thd, APR_SUCCESS);
 		return NULL;
 	}else{
