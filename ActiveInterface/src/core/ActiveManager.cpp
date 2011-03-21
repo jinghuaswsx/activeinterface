@@ -108,9 +108,9 @@ void ActiveManager::startConnections() throw (ActiveException){
 				logIt(logMessage);
 			}catch (ActiveException& ae){
 				//deleting iterator
-				connectionsMap.erase(it++);
+				//connectionsMap.erase(it++);
 				//deleting activeConnection
-				delete activeConnection;
+				//delete activeConnection;
 				//logging it
 				logMessage<<ae.getMessage();
 				logIt(logMessage);

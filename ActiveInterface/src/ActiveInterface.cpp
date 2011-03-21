@@ -53,17 +53,17 @@ void ActiveInterface::init(const std::string& configurationFile)
     	 //initialize activeManager in singleton invoke all initializing
     	 //of data memory structures read from xml file configuration
     	 readersWriters.writerLock();
+		 //setting state
+		 setState(NOT_INITIALIZED);
     	 try{
-    		 //setting state
-    		 setState(NOT_INITIALIZED);
     		 //initializing...
     		 ActiveManager::getInstance()->init(configurationFile,this);
-    		 //setting state
-    		 setState(INITIALIZED);
     	 }catch(...){
-        	 logMessage << "ActiveException. Library is not initialized by XML File.";
-        	 LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+    		 logMessage << "ActiveException. Library is not initialized by XML File.";
+    		 LOG4CXX_DEBUG(logger, logMessage.str().c_str());
     	 }
+		 //setting state
+		 setState(INITIALIZED);
     	 //unlocking
     	 readersWriters.writerUnlock();
 
