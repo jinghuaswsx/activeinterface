@@ -115,76 +115,88 @@ void ActiveProducer::run() throw (ActiveException){
 	std::stringstream logMessage;
 
 	try {
-		// Create a ConnectionFactory
-		std::auto_ptr<ActiveMQConnectionFactory> connectionFactory(
-				new ActiveMQConnectionFactory(getIpBroker()));
 
-		try{
-			// Create a Connection
-			connection = connectionFactory->createConnection(	getIpBroker(),
-																getUsername(),
-																getPassword(),
-																getClientId());
-			connection->start();
-			connection->setExceptionListener(this);
-		} catch( CMSException& e ) {
-			logMessage << "ERROR: I can't stablish connection with broker, broker is up? address is good formatted? " << e.what();
-			ActiveException activeException(logMessage);
-			throw activeException;
-		}
+		//if connection is initiated before, dont do anything
+		if (getState()==CONNECTION_NOT_INITIATED){
 
-		// Create a Session
-		if( getClientAck() ) {
-			session = connection->createSession(Session::CLIENT_ACKNOWLEDGE);
-		} else {
-			session = connection->createSession(Session::AUTO_ACKNOWLEDGE );
-		}
+			// Create a ConnectionFactory
+			std::auto_ptr<ActiveMQConnectionFactory> connectionFactory(
+					new ActiveMQConnectionFactory(getIpBroker()));
 
-		// Create the destination (Topic or Queue)
-		if( getTopic() ) {
-			destination = session->createTopic( getDestination() );
-		} else {
-			destination = session->createQueue( getDestination() );
-		}
+			try{
+				// Create a Connection
+				connection = connectionFactory->createConnection(	getIpBroker(),
+																	getUsername(),
+																	getPassword(),
+																	getClientId());
+				connection->start();
+				connection->setExceptionListener(this);
+			} catch( CMSException& e ) {
+				logMessage << "ERROR: I can't stablish connection with broker, broker is up? address is good formatted? " << e.what();
+				ActiveException activeException(logMessage);
+				throw activeException;
+			}
 
-		//creating temporary queue if we have to
-		if (getRequestReply()){
-			setType(ACTIVE_PRODUCER_RR);
-			createTempQueue();
-		}else{
-			logMessage << "Request reply is disabled for connection id: "<< getId();
+			// Create a Session
+			if( getClientAck() ) {
+				session = connection->createSession(Session::CLIENT_ACKNOWLEDGE);
+			} else {
+				session = connection->createSession(Session::AUTO_ACKNOWLEDGE );
+			}
+
+			// Create the destination (Topic or Queue)
+			if( getTopic() ) {
+				destination = session->createTopic( getDestination() );
+			} else {
+				destination = session->createQueue( getDestination() );
+			}
+
+			//creating temporary queue if we have to
+			if (getRequestReply()){
+				setType(ACTIVE_PRODUCER_RR);
+				createTempQueue();
+			}else{
+				logMessage << "Request reply is disabled for connection id: "<< getId();
+				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+				logMessage.str("");
+			}
+
+			// Create a MessageProducer from the Session to the Topic or Queue
+			producer = session->createProducer( destination );
+
+			//setting message delivery mode
+			if (getPersistent()){
+				producer->setDeliveryMode(DeliveryMode::PERSISTENT);
+			}else{
+				producer->setDeliveryMode(DeliveryMode::NON_PERSISTENT);
+			}
+
+			//setting flag state to running
+			setState(CONNECTION_RUNNING);
+
+			//run send thread
+			activeThread.runSendThread();
+
+			logMessage << "ActiveProducer::run. Producer is started succesfully: "<< getId();
 			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-			logMessage.str("");
-		}
-
-		// Create a MessageProducer from the Session to the Topic or Queue
-		producer = session->createProducer( destination );
-
-		//setting message delivery mode
-		if (getPersistent()){
-			producer->setDeliveryMode(DeliveryMode::PERSISTENT);
 		}else{
-			producer->setDeliveryMode(DeliveryMode::NON_PERSISTENT);
+			logMessage.str("");
+			logMessage << "ActiveProducer::run. Producer was started before: "<< getId();
+			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		}
-
-		//setting flag state to running
-		setState(CONNECTION_RUNNING);
-
-		//run send thread
-	    activeThread.runSendThread();
-
-		logMessage << "ActiveProducer::run. Producer is started succesfully: "<< getId();
-		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 	} catch (ActiveException& e){
 		//throw exception about this
+		setState(CONNECTION_NOT_INITIATED);
 		throw e;
 	} catch (CMSException& e) {
 		//throw exception about this
+		setState(CONNECTION_NOT_INITIATED);
 		logMessage << "Consumer::run CMSException. Check connection parameters. Broker is up?"<<e.what();
 		throw ActiveException(logMessage.str());
 	} catch (...){
 		//throw exception about this
+		setState(CONNECTION_NOT_INITIATED);
 		logMessage << "Consumer::run Unknown exception. Check connection parameters. Broker is up?";
 		throw ActiveException(logMessage.str());
 	}

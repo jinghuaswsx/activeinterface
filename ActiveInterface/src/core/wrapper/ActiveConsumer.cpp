@@ -116,100 +116,110 @@ void ActiveConsumer::run() 	throw (ActiveException){
 	std::stringstream logMessage;
 
 	try {
-		// Create a ConnectionFactory
-		ActiveMQConnectionFactory* connectionFactory =
-				new ActiveMQConnectionFactory( getIpBroker() );
 
-		// Create a Connection
-		try{
-			connection = connectionFactory->createConnection(	getIpBroker(),
-																getUsername(),
-																getPassword(),
-																getClientId());
-		} catch( CMSException& e ) {
-			//Delete connection factore
-			delete connectionFactory;
-			//giving traces
-			logMessage << "ActiveConsumer::run I can't stablish connection with broker "<<e.what();
-			ActiveException activeException(logMessage);
-			throw activeException;
-		}
+		//if connection is initiated before, dont do anything
+		if (getState()==CONNECTION_NOT_INITIATED){
 
-		//deleting factory
-		delete connectionFactory;
+			// Create a ConnectionFactory
+			ActiveMQConnectionFactory* connectionFactory =
+					new ActiveMQConnectionFactory( getIpBroker() );
 
-		ActiveMQConnection* amqConnection = dynamic_cast<ActiveMQConnection*>( connection );
-		if( amqConnection != NULL ) {
-			amqConnection->addTransportListener( this );
-		}else{
-			ActiveException activeException("Consumer::run. Exception, connection with broker is null.");
-			throw activeException;
-		}
-
-		//starting connection with broker
-		connection->start();
-
-		// Create a Session
-		if( getClientAck() ) {
-			session = connection->createSession( Session::CLIENT_ACKNOWLEDGE );
-		} else {
-			session = connection->createSession( Session::AUTO_ACKNOWLEDGE );
-		}
-
-		//Setup a message producer to respond to messages from clients
-		if (getRequestReply()){
-			//setting the type
-			setType(ACTIVE_CONSUMER_RR);
-		    //we will get the destination
-		    //to send to from the CMSReplyTo header field from a Message
-			replyProducer = session->createProducer(NULL);
-			replyProducer->setDeliveryMode(DeliveryMode::NON_PERSISTENT);
-		}
-
-		// Create the destination (Topic or Queue)
-		if( getTopic() ) {
-			// creating a durable consumer for be attached to a topic
-			// and if connection resets forward all messages
-			// be carefull, for durable consumers is not allowed client ids null
-			destination = session->createTopic( getDestination() );
-			if (isDurable()){
-				consumer = session->createDurableConsumer(	(Topic*)destination,
-															getClientId(),
-															getSelector());
-			}else{
-				consumer =session->createConsumer((Topic*)destination,getSelector());
+			// Create a Connection
+			try{
+				connection = connectionFactory->createConnection(	getIpBroker(),
+																	getUsername(),
+																	getPassword(),
+																	getClientId());
+			} catch( CMSException& e ) {
+				//Delete connection factore
+				delete connectionFactory;
+				//giving traces
+				logMessage << "ActiveConsumer::run I can't stablish connection with broker "<<e.what();
+				ActiveException activeException(logMessage);
+				throw activeException;
 			}
-		} else {
-			destination = session->createQueue( getDestination() );
-			//creating the consumer
-			consumer = session->createConsumer( destination, getSelector() );
+
+			//deleting factory
+			delete connectionFactory;
+
+			ActiveMQConnection* amqConnection = dynamic_cast<ActiveMQConnection*>( connection );
+			if( amqConnection != NULL ) {
+				amqConnection->addTransportListener( this );
+			}else{
+				ActiveException activeException("Consumer::run. Exception, connection with broker is null.");
+				throw activeException;
+			}
+
+			//starting connection with broker
+			connection->start();
+
+			// Create a Session
+			if( getClientAck() ) {
+				session = connection->createSession( Session::CLIENT_ACKNOWLEDGE );
+			} else {
+				session = connection->createSession( Session::AUTO_ACKNOWLEDGE );
+			}
+
+			//Setup a message producer to respond to messages from clients
+			if (getRequestReply()){
+				//setting the type
+				setType(ACTIVE_CONSUMER_RR);
+				//we will get the destination
+				//to send to from the CMSReplyTo header field from a Message
+				replyProducer = session->createProducer(NULL);
+				replyProducer->setDeliveryMode(DeliveryMode::NON_PERSISTENT);
+			}
+
+			// Create the destination (Topic or Queue)
+			if( getTopic() ) {
+				// creating a durable consumer for be attached to a topic
+				// and if connection resets forward all messages
+				// be carefull, for durable consumers is not allowed client ids null
+				destination = session->createTopic( getDestination() );
+				if (isDurable()){
+					consumer = session->createDurableConsumer(	(Topic*)destination,
+																getClientId(),
+																getSelector());
+				}else{
+					consumer =session->createConsumer((Topic*)destination,getSelector());
+				}
+			} else {
+				destination = session->createQueue( getDestination() );
+				//creating the consumer
+				consumer = session->createConsumer( destination, getSelector() );
+			}
+
+			// where Im going to catch messages
+			//consumer->setMessageListener( this );
+			//defining this to catch exceptions on transport layer
+			connection->setExceptionListener(this);
+
+			//Connection is running
+			setState(CONNECTION_RUNNING);
+
+			//starting the consumer thread
+			activeConsumerThread.runThread();
+
+			if (getRequestReply()){
+				//starting the producer thread
+				activeThread.runSendThread();
+			}
+
+			logMessage.str("");
+			logMessage << "ActiveConsumer::run. Consumer is started succesfully: "<< getId();
+			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+		}else{
+			logMessage.str("");
+			logMessage << "ActiveConsumer::run. Consumer was started before: "<< getId();
+			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		}
-
-		// where Im going to catch messages
-		//consumer->setMessageListener( this );
-		//defining this to catch exceptions on transport layer
-		connection->setExceptionListener(this);
-
-		//Connection is running
-		setState(CONNECTION_RUNNING);
-
-		//starting the consumer thread
-		activeConsumerThread.runThread();
-
-	    if (getRequestReply()){
-	    	//starting the producer thread
-	    	activeThread.runSendThread();
-	    }
-
-		logMessage.str("");
-		logMessage << "ActiveConsumer::run. Consumer is started succesfully: "<< getId();
-		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-
 	} catch (ActiveException& e){
 		//up exception
+		setState(CONNECTION_NOT_INITIATED);
 		throw e;
 	} catch (CMSException& e) {
 		//throw exception about this
+		setState(CONNECTION_NOT_INITIATED);
 		logMessage << "Consumer::run CMSException. Check connection parameters. Broker is up?"<<e.what();
 		throw ActiveException(logMessage.str());
 	}

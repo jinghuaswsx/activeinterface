@@ -194,19 +194,19 @@ void ActiveInterface::sendResponse(	std::string& connectionId,
 	}
 }
 
-void ActiveInterface::newProducer (	std::string& id,
-									std::string& ipBroker,
-									std::string& destination,
-									bool requestReply,
-									bool topic,
-									bool persistent,
-									bool clientAck,
-									int maxSizeQueue,
-									const std::string& username,
-									const std::string& password,
-									const std::string& clientId,
-									long persistence,
-									const std::string& certificate)
+ActiveConnection* ActiveInterface::newProducer(	std::string& id,
+												std::string& ipBroker,
+												std::string& destination,
+												bool requestReply,
+												bool topic,
+												bool persistent,
+												bool clientAck,
+												int maxSizeQueue,
+												const std::string& username,
+												const std::string& password,
+												const std::string& clientId,
+												long persistence,
+												const std::string& certificate)
 	throw (ActiveException){
 
 	std::stringstream logMessage;
@@ -227,12 +227,18 @@ void ActiveInterface::newProducer (	std::string& id,
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 		readersWriters.writerLock();
-		ActiveManager::getInstance()->newConnection(	id,ipBroker,type,destination,
-														topic,persistent,"",false,
-														clientAck,maxSizeQueue,username,
-														password,clientId,persistence,
-														certificate);
-		readersWriters.writerUnlock();
+		ActiveConnection* connectionPtr=ActiveManager::getInstance()->newConnection(
+																		id,ipBroker,type,destination,
+																		topic,persistent,"",false,
+																		clientAck,maxSizeQueue,username,
+																		password,clientId,persistence,
+																		certificate);
+		if (connectionPtr){
+			readersWriters.writerUnlock();
+			return connectionPtr;
+		}else{
+			throw ActiveException("Connection couldn't be saved in map");
+		}
 
 		logMessage.str("");
 		logMessage << "-------------------------------------------------------"<< std::endl;
@@ -249,21 +255,21 @@ void ActiveInterface::newProducer (	std::string& id,
 		LOG4CXX_ERROR(logger, logMessage.str().c_str());
 		throw ActiveException(logMessage);
 	}
-
+	return NULL;
 }
 
-void ActiveInterface::newConsumer (	std::string& id,
-									std::string& ipBroker,
-									std::string& destination,
-									bool requestReply,
-									bool topic,
-									bool durable,
-									bool clientAck,
-									const std::string& selector,
-									const std::string& username,
-									const std::string& password,
-									const std::string& clientId,
-									const std::string& certificate)
+ActiveConnection* ActiveInterface::newConsumer(	std::string& id,
+												std::string& ipBroker,
+												std::string& destination,
+												bool requestReply,
+												bool topic,
+												bool durable,
+												bool clientAck,
+												const std::string& selector,
+												const std::string& username,
+												const std::string& password,
+												const std::string& clientId,
+												const std::string& certificate)
 	throw (ActiveException){
 
 	std::stringstream logMessage;
@@ -283,11 +289,17 @@ void ActiveInterface::newConsumer (	std::string& id,
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 		readersWriters.writerLock();
-		ActiveManager::getInstance()->newConnection(	id, ipBroker,type,destination,
-														topic,false,selector,durable,clientAck,
-														0,username,password,clientId,0,
-														certificate);
-		readersWriters.writerUnlock();
+		ActiveConnection* connectionPtr=ActiveManager::getInstance()->newConnection(
+																	id, ipBroker,type,destination,
+																	topic,false,selector,durable,clientAck,
+																	0,username,password,clientId,0,
+																	certificate);
+		if (connectionPtr){
+			readersWriters.writerUnlock();
+			return connectionPtr;
+		}else{
+			throw ActiveException("Connection couldn't be saved in map");
+		}
 
 		logMessage.str("");
 		logMessage << "-------------------------------------------------------" << std::endl;
@@ -306,6 +318,7 @@ void ActiveInterface::newConsumer (	std::string& id,
 		LOG4CXX_ERROR(logger, logMessage.str().c_str());
 		throw ActiveException(logMessage);
 	}
+	return NULL;
 }
 
 void ActiveInterface::newLink(	std::string& serviceId,

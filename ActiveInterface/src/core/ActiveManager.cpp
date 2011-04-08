@@ -293,21 +293,21 @@ void ActiveManager::sendResponse (std::string& connectionId, ActiveMessage& acti
 	}
 }
 
-bool ActiveManager::newConnection (	std::string& id,
-									std::string& ipBroker,
-									int type,
-									std::string& destination,
-									bool topic,
-									bool persistent,
-									const std::string& selector,
-									bool durable,
-									bool clientAck,
-									int maxSizeQueue,
-									const std::string& username,
-									const std::string& password,
-									const std::string& clientId,
-									int persistence,
-									const std::string& certificate) throw (ActiveException){
+ActiveConnection* ActiveManager::newConnection (std::string& id,
+												std::string& ipBroker,
+												int type,
+												std::string& destination,
+												bool topic,
+												bool persistent,
+												const std::string& selector,
+												bool durable,
+												bool clientAck,
+												int maxSizeQueue,
+												const std::string& username,
+												const std::string& password,
+												const std::string& clientId,
+												int persistence,
+												const std::string& certificate) throw (ActiveException){
 
 	std::stringstream logMessage;
 	try{
@@ -321,11 +321,12 @@ bool ActiveManager::newConnection (	std::string& id,
 		std::string clientIdNC=clientId;
 		std::string certificateNC=certificate;
 
-		if (saveConnection(	id, ipBroker, type, topic, destination,
-							persistent,selectorNC,durable,clientAck,maxSizeQueue,
-							usernameNC,passwordNC,clientIdNC,persistence,certificateNC)){
-			startConnection(id);
-			return true;
+		ActiveConnection* connectionPtr=saveConnection(	id, ipBroker, type, topic, destination,
+														persistent,selectorNC,durable,clientAck,maxSizeQueue,
+														usernameNC,passwordNC,clientIdNC,persistence,certificateNC);
+		if (connectionPtr){
+			//startConnection(id);
+			return connectionPtr;
 		}else{
 			logMessage.str("Connection couldn't be stored in map. is there another one with the same id?");
 			LOG4CXX_DEBUG(logger,logMessage.str().c_str());
@@ -829,21 +830,21 @@ bool ActiveManager::insertInMMap(	std::string& serviceId,
 	return true;
 }
 
-bool ActiveManager::saveConnection(	std::string& id,
-									std::string& ipBroker,
-									int type,
-									bool topic,
-									std::string& destination,
-									bool persistent,
-									std::string& selector,
-									bool durable,
-									bool clientAck,
-									int maxSizeQueue,
-									std::string& username,
-									std::string& password,
-									std::string& clientId,
-									int persistence,
-									std::string& certificate){
+ActiveConnection* ActiveManager::saveConnection(std::string& id,
+												std::string& ipBroker,
+												int type,
+												bool topic,
+												std::string& destination,
+												bool persistent,
+												std::string& selector,
+												bool durable,
+												bool clientAck,
+												int maxSizeQueue,
+												std::string& username,
+												std::string& password,
+												std::string& clientId,
+												int persistence,
+												std::string& certificate){
 
 	std::stringstream logMessage;
 	bool withRequestReply=false;
@@ -872,18 +873,18 @@ bool ActiveManager::saveConnection(	std::string& id,
 				logMessage << " Error Inserting connection " << id<< " check XML configuration file.";
 				logIt(logMessage);
 				delete activeConsumer;
-				return false;
+				return NULL;
 			}
 		}else{
 			logMessage << " Problem instantiating ActiveConsumer, is null." << id;
 			logIt(logMessage);
 			delete activeConsumer;
-			return false;
+			return NULL;
 		}
 		logMessage << "Saving connection " << id << " to map... Done";
 		logIt(logMessage);
 
-		return true;
+		return activeConsumer;
 
 	}else{
 
@@ -909,19 +910,19 @@ bool ActiveManager::saveConnection(	std::string& id,
 				logMessage << "Error saving connection... " << id;
 				logIt(logMessage);
 				delete activeProducer;
-				return false;
+				return NULL;
 			}
 		}else{
 			logMessage << "Problem instantiating activeProducer, is null." << id;
 			logIt(logMessage);
 			delete activeProducer;
-			return false;
+			return NULL;
 		}
 
 		logMessage << "Saving connection " <<id << " to map... Done";
 		logIt(logMessage);
 
-		return true;
+		return activeProducer;
 	}
 }
 

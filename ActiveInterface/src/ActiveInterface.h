@@ -130,19 +130,19 @@ namespace ai{
 		 *
 		 * @throws ActiveException if something bad happens
 		 */
-		void newProducer (	std::string& id,
-							std::string& ipBroker,
-							std::string& destination,
-							bool requestReply=false,
-							bool topic=false,
-							bool persistent=false,
-							bool clientAck=false,
-							int maxSizeQueue=0,
-							const std::string& username="",
-							const std::string& password="",
-							const std::string& clientId="",
-							long persistence=0,
-							const std::string& certificate="") throw (ActiveException);
+		ActiveConnection* newProducer (	std::string& id,
+										std::string& ipBroker,
+										std::string& destination,
+										bool requestReply=false,
+										bool topic=false,
+										bool persistent=false,
+										bool clientAck=false,
+										int maxSizeQueue=0,
+										const std::string& username="",
+										const std::string& password="",
+										const std::string& clientId="",
+										long persistence=0,
+										const std::string& certificate="") throw (ActiveException);
 
 		/**
 		 * Method that creates a new JMS Consumer
@@ -163,18 +163,18 @@ namespace ai{
 		 *
 		 * @throws ActiveException if something bad happens
 		 */
-		void newConsumer (	std::string& id,
-							std::string& ipBroker,
-							std::string& destination,
-							bool requestReply=false,
-							bool topic=false,
-							bool durable=false,
-							bool clientAck=false,
-							const std::string& selector="",
-							const std::string& username="",
-							const std::string& password="",
-							const std::string& clientId="",
-							const std::string& certificate="") throw (ActiveException);
+		ActiveConnection* newConsumer (	std::string& id,
+										std::string& ipBroker,
+										std::string& destination,
+										bool requestReply=false,
+										bool topic=false,
+										bool durable=false,
+										bool clientAck=false,
+										const std::string& selector="",
+										const std::string& username="",
+										const std::string& password="",
+										const std::string& clientId="",
+										const std::string& certificate="") throw (ActiveException);
 
 		/**
 		 *  Method that creates a new link with its properties.

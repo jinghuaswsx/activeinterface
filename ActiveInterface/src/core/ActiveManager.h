@@ -139,21 +139,21 @@ namespace ai{
 		 *
 		 * @throws ActiveException is something bad happens
 		 */
-		bool newConnection (std::string& id,
-							std::string& ipBroker,
-							int type,
-							std::string& destination,
-							bool topic=false,
-							bool persistent=false,
-							const std::string& selector="",
-							bool durable=false,
-							bool clientAck=false,
-							int maxSizeQueue=0,
-							const std::string& username="",
-							const std::string& password="",
-							const std::string& clientId="",
-							int persistence=0,
-							const std::string& certificate="") throw (ActiveException);
+		ActiveConnection* newConnection (	std::string& id,
+											std::string& ipBroker,
+											int type,
+											std::string& destination,
+											bool topic=false,
+											bool persistent=false,
+											const std::string& selector="",
+											bool durable=false,
+											bool clientAck=false,
+											int maxSizeQueue=0,
+											const std::string& username="",
+											const std::string& password="",
+											const std::string& clientId="",
+											int persistence=0,
+											const std::string& certificate="") throw (ActiveException);
 
 		/**
 		 *  Method that creates a new link with its properties.
@@ -410,23 +410,23 @@ namespace ai{
 		 * before delete it (if it is possible)
 		 * @param certificate Path to the pem certificate if you want to use SSL protocol.
 		 *
-		 * @return true if connection is saved, else false.
+		 * @return pointer to connection if was created succesfull, else null.
 		 */
-		bool saveConnection(	std::string& id,
-								std::string& ipBroker,
-								int type,
-								bool topic,
-								std::string& destination,
-								bool persistent,
-								std::string& selector,
-								bool durable,
-								bool clientAck,
-								int maxSizeQueue,
-								std::string& username,
-								std::string& password,
-								std::string& clientId,
-								int persistence,
-								std::string& certificate);
+		ActiveConnection* saveConnection(	std::string& id,
+											std::string& ipBroker,
+											int type,
+											bool topic,
+											std::string& destination,
+											bool persistent,
+											std::string& selector,
+											bool durable,
+											bool clientAck,
+											int maxSizeQueue,
+											std::string& username,
+											std::string& password,
+											std::string& clientId,
+											int persistence,
+											std::string& certificate);
 
 		/**
 		 * Method that start each service invoking his run method
