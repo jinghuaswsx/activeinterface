@@ -281,6 +281,16 @@ namespace ai{
 		bool isInRecoveryMode(){ return false;}
 
 		/**
+		 * method to stop the current connection
+		 */
+		void start();
+
+		/**
+		 * method to stop the current consumer
+		 */
+		void stop();
+
+		/**
 		 * Close connections, free resources
 		 */
 		void close();

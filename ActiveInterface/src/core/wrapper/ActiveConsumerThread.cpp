@@ -78,6 +78,7 @@ static void* APR_THREAD_FUNC onMessageThread(apr_thread_t *thd, void *data){
 
 int ActiveConsumerThread::runThread (){
 
+	activeConnection->startConsumerThread();
 	threadRunning=apr_thread_create(&thd_arr, thd_attr, onMessageThread, (void*)this, mp);
 	if (threadRunning!=0){
 		throw ActiveException ("Error: Consumer Thread was not initialized well.");

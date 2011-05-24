@@ -117,7 +117,13 @@ void ActiveProducer::run() throw (ActiveException){
 	try {
 
 		//if connection is initiated before, dont do anything
-		if (getState()==CONNECTION_NOT_INITIATED){
+		if (getState()==CONNECTION_RUNNING){
+
+			logMessage.str("");
+			logMessage << "ActiveProducer::run. Producer was started before: "<< getId();
+			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+
+		}else{
 
 			// Create a ConnectionFactory
 			std::auto_ptr<ActiveMQConnectionFactory> connectionFactory(
@@ -178,10 +184,6 @@ void ActiveProducer::run() throw (ActiveException){
 			activeThread.runSendThread();
 
 			logMessage << "ActiveProducer::run. Producer is started succesfully: "<< getId();
-			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-		}else{
-			logMessage.str("");
-			logMessage << "ActiveProducer::run. Producer was started before: "<< getId();
 			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		}
 
@@ -915,12 +917,66 @@ void ActiveProducer::isQueueReadyAgain(ActiveMessage& activeMessageR){
 	}
 }
 
+void ActiveProducer::start(){
+	try{
+		//starting perssistence
+		activePersistence.init(*this);
+		//run all
+		run();
+	}catch(ActiveException& ae){
+		throw ae;
+	}
+}
+
+void ActiveProducer::stop(){
+	try{
+		std::stringstream logMessage;
+		logMessage << "Producer::stop. Stopping producer " << getIpBroker() <<" " << getDestination()<< "...";
+		LOG4CXX_INFO(logger, logMessage.str().c_str());
+
+		//setting state to close
+		setState(CONNECTION_NOT_INITIATED);
+		//ending consumer thread
+		endConsumerThread();
+		//ending persistence thread
+		activePersistence.stopThread();
+		//ending the producer thread
+		activeThread.stop();
+		//clean up
+		cleanup();
+
+		logMessage.str("");
+		logMessage << "Producer::stop. Producer " <<  getId()<< " connected to " << getIpBroker() << " " << getDestination()<< " stopped succesfully!";
+		LOG4CXX_INFO(logger, logMessage.str().c_str());
+
+	}catch (ActiveException& ae){
+		throw ae;
+	}
+}
+
 void ActiveProducer::close() {
 	std::stringstream logMessage;
 	logMessage << "Producer::close. Closing producer " << getIpBroker() <<" " << getDestination()<< "...";
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
 
+	//setting state to close
+	setState(CONNECTION_CLOSED);
+	//removing link connected to this producer
+	ActiveManager::getInstance()->removeLinkBindingTo(getId());
+	//ending consumer thread
+	endConsumerThread();
+	//ending persistence thread
+	activePersistence.stopThread();
+	//ending the producer thread
+	activeThread.stop();
+	//ending the callback thread
+	activeCallbackThread.stop();
+	//clean up
 	cleanup();
+
+	logMessage.str("");
+	logMessage << "Producer::close. Producer " <<  getId()<< " connected to " << getIpBroker() << " " << getDestination()<< " closed succesfully!";
+	LOG4CXX_INFO(logger, logMessage.str().c_str());
 }
 
 void ActiveProducer::cleanup(){
@@ -1015,9 +1071,6 @@ void ActiveProducer::cleanup(){
 		}
 		connection = NULL;
 
-		logMessage.str("");
-		logMessage << "Producer::close. Producer " <<  getId()<< " connected to " << getIpBroker() << " " << getDestination()<< " closed succesfully!";
-		LOG4CXX_INFO(logger, logMessage.str().c_str());
 	}catch(...){
 		logMessage << "Consumer::closed. Producer " << getId()<< " connected to " << getIpBroker() << " " << getDestination() << " closed with Exception!";
 		LOG4CXX_INFO(logger, logMessage.str().c_str());
@@ -1025,20 +1078,7 @@ void ActiveProducer::cleanup(){
 }
 
 ActiveProducer::~ActiveProducer(){
-	//setting state to close
-	setState(CONNECTION_CLOSED);
-	//removing link connected to this producer
-	ActiveManager::getInstance()->removeLinkBindingTo(getId());
-	//ending consumer thread
-	endConsumerThread();
-	//ending persistence thread
-	activePersistence.stopThread();
-	//ending the producer thread
-	activeThread.stop();
-	//ending the callback thread
-	activeCallbackThread.stop();
 	//closing producer
 	close();
-
 }
 

@@ -73,6 +73,7 @@ static void* APR_THREAD_FUNC sendThread(apr_thread_t *thd, void *data){
 
 		ActiveConnection* myActiveProducer=((ActiveProducerThread*)data)->getActiveConnection();
 		ActiveSharedObject* mySharedObject=((ActiveProducerThread*)data)->getActiveSharedObject();
+		mySharedObject->setRunningThread();
 
 		//while (!((ActiveProducerThread*)data)->getKillThread()){
 		while(true){

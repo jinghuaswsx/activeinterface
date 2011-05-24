@@ -267,6 +267,7 @@ namespace ai{
 		int getState (){ return state;}
 		std::string& getCertificate(){return certificate;}
 		bool getEndConsumerThread (){ return consumerThreadFlag;}
+		void startConsumerThread(){ consumerThreadFlag=false;}
 		////////////////////////////////////////////////////////////////
 		void setLinkId (std::string& linkIdR){ linkId=linkIdR;}
 		void setState (int stateR){state=stateR;}
@@ -286,6 +287,16 @@ namespace ai{
 		 * Method that cleans up the connection, close connection and free resources
 		 */
 		virtual void close() abstract;
+
+		/**
+		 * method to start the connection
+		 */
+		virtual void start() abstract;
+
+		/**
+		 * method to stop the connection
+		 */
+		virtual void stop() abstract;
 
 		/**
 		 * Destructor by default

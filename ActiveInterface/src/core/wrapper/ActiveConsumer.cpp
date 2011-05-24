@@ -118,8 +118,13 @@ void ActiveConsumer::run() 	throw (ActiveException){
 	try {
 
 		//if connection is initiated before, dont do anything
-		if (getState()==CONNECTION_NOT_INITIATED){
+		if (getState()==CONNECTION_RUNNING){
 
+			logMessage.str("");
+			logMessage << "ActiveConsumer::run. Consumer was started before: "<< getId();
+			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+
+		}else{
 			// Create a ConnectionFactory
 			ActiveMQConnectionFactory* connectionFactory =
 					new ActiveMQConnectionFactory( getIpBroker() );
@@ -207,10 +212,6 @@ void ActiveConsumer::run() 	throw (ActiveException){
 
 			logMessage.str("");
 			logMessage << "ActiveConsumer::run. Consumer is started succesfully: "<< getId();
-			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
-		}else{
-			logMessage.str("");
-			logMessage << "ActiveConsumer::run. Consumer was started before: "<< getId();
 			LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 		}
 	} catch (ActiveException& e){
@@ -720,6 +721,38 @@ void ActiveConsumer::isQueueReadyAgain(ActiveMessage& activeMessageR){
 	}
 }
 
+void ActiveConsumer::start(){
+	try{
+		//starting all again
+		startConsumerThread();
+		//run all
+		run();
+	}catch (ActiveException& ae){
+		throw ae;
+	}
+}
+
+void ActiveConsumer::stop(){
+	try{
+		std::stringstream logMessage;
+		logMessage << "Consumer::stop. Stopping consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination()<< "...";
+		LOG4CXX_INFO(logger, logMessage.str().c_str());
+		//setting state to close
+		setState(CONNECTION_NOT_INITIATED);
+		//closing the consumer thread
+		endConsumerThread();
+		//ending the producer thread
+		activeThread.stop();
+		//cleaning up
+		cleanup();
+		logMessage.str("");
+		logMessage << "Consumer::stop. Consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination() << " stopped succesfully!";
+		LOG4CXX_INFO(logger, logMessage.str().c_str());
+	}catch (ActiveException& ae){
+		throw ae;
+	}
+}
+
 void ActiveConsumer::cleanup(){
 
 	//*************************************************
@@ -805,8 +838,6 @@ void ActiveConsumer::cleanup(){
 		consumer = NULL;
 
 		message.str("");
-		message << "Consumer::close. Consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination() << " closed succesfully!";
-		LOG4CXX_INFO(logger, message.str().c_str());
 	}catch(...){
 		message << "Consumer::closed. Consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination() << " closed with Exception!";
 		LOG4CXX_INFO(logger, message.str().c_str());
@@ -815,14 +846,11 @@ void ActiveConsumer::cleanup(){
 }
 
 void ActiveConsumer::close() {
+	//closing consumer
 	std::stringstream logMessage;
 	logMessage << "Consumer::close. Closing consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination()<< "...";
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
 
-	cleanup();
-}
-
-ActiveConsumer::~ActiveConsumer(){
 	//setting state to close
 	setState(CONNECTION_CLOSED);
 	//deletint the references to this connection
@@ -833,6 +861,14 @@ ActiveConsumer::~ActiveConsumer(){
 	activeThread.stop();
 	//ending the callback thread
 	activeCallbackThread.stop();
-	//closing consumer
+	//cleaning up
+	cleanup();
+
+	logMessage.str("");
+	logMessage << "Consumer::close. Consumer " << getId()<< " connected to " << getIpBroker() << " " << getDestination() << " closed succesfully!";
+	LOG4CXX_INFO(logger, logMessage.str().c_str());
+}
+
+ActiveConsumer::~ActiveConsumer(){
 	close();
 }

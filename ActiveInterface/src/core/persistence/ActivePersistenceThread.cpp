@@ -67,6 +67,8 @@ static void* APR_THREAD_FUNC persistenceThread(apr_thread_t *thd, void *data){
 	if (data){
 		ActivePersistence* myActivePersistence=((ActivePersistenceThread*)data)->getActivePersistence();
 		ActiveSharedObject* mySharedObject=((ActivePersistenceThread*)data)->getActiveSharedObject();
+		mySharedObject->setRunningThread();
+
 		while(true){
 			apr_thread_mutex_lock(mySharedObject->getMutex());
 			while (mySharedObject->getMessagesReady() == 0 && !mySharedObject->getEndThread()) {

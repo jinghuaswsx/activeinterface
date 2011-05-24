@@ -320,6 +320,16 @@ namespace ai{
 		bool isInRecoveryMode(){return activePersistence.getRecoveryMode();}
 
 		/**
+		 * method to stop the current connection
+		 */
+		void start();
+
+		/**
+		 * method to stop the current producer
+		 */
+		void stop();
+
+		/**
 		 * Close connections, free resources
 		 */
 		void close();

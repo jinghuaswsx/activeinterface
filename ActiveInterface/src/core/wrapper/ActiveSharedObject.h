@@ -120,6 +120,11 @@ namespace ai{
 		void setEndThread(){ endThread=true;}
 
 		/**
+		 * Method to set end flag to false
+		 */
+		void setRunningThread() { endThread=false;}
+
+		/**
 		 * method to know when the thread needs to dead
 		 */
 		bool getEndThread(){ return endThread;}
