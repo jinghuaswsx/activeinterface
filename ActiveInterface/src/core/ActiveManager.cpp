@@ -780,6 +780,24 @@ void ActiveManager::getConnsByDestination (	std::string& destination,
 	}
 }
 
+void ActiveManager::getConnections (std::list<ActiveConnection*>& connectionListR)
+	throw (ActiveException){
+
+	//clearing list
+	connectionListR.clear();
+	try{
+		for( std::map <std::string,ActiveConnection*>::iterator ii=connectionsMap.begin();ii!=connectionsMap.end(); ++ii){
+			ActiveConnection* activeConnection=(*ii).second;
+			if (activeConnection){
+				connectionListR.push_front(activeConnection);
+			}
+		}
+	}catch (ActiveException& ae){
+		LOG4CXX_ERROR(logger, ae.getMessage().c_str());
+		throw ae;
+	}
+}
+
 void ActiveManager::getServices (std::list<std::string>& servicesList)
 	throw (ActiveException){
 
@@ -1101,6 +1119,9 @@ ActiveManager::~ActiveManager() {
 		ii!=linksMap.end(); ++ii){
 		delete (*ii).second;
 	}
+
+	ActiveManager::instanceFlag=false;
+	ActiveManager::mySelf=NULL;
 
 	//shuttind down activemqcpp library
     activemq::library::ActiveMQCPP::shutdownLibrary();

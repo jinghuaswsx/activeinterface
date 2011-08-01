@@ -65,8 +65,8 @@ int ActiveQueue::enqueue(const ActiveMessage& activeMessage) throw (ActiveExcept
 			//unlocking the queue
 			accessQueue.unlock();
 
-			//logMessage << "Enqueued message in position "<<messageQueue.size();
-			//LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+			logMessage << "Enqueued message in position "<<messageQueue.size();
+			LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 
 			congestionControl();
 
@@ -119,13 +119,17 @@ void ActiveQueue::congestionControl (){
 	if (maxQueueSize!=0){
 		int pct=(messageQueue.size()*100)/maxQueueSize;
 		if (pct<LEVEL1_PERCENT_MESSAGES_READY){
+			logMessage << "Aplying congestion control controlling flow producer. "<< pct;
 			apr_sleep (1);
+
 		} else if (	pct>=LEVEL1_PERCENT_MESSAGES_READY  &&
 					pct<LEVEL2_PERCENT_MESSAGES_READY){
+			logMessage << "Aplying congestion control controlling flow producer. "<< pct;
 			apr_sleep (1000);
 
 		} else if (	pct>=LEVEL2_PERCENT_MESSAGES_READY  &&
 					pct<LEVEL3_PERCENT_MESSAGES_READY){
+			logMessage << "Aplying congestion control controlling flow producer. "<< pct;
 			apr_sleep (5000);
 
 		} else if (	pct>=LEVEL3_PERCENT_MESSAGES_READY  &&
@@ -140,6 +144,7 @@ void ActiveQueue::congestionControl (){
 		} else{
 			apr_sleep (0);
 		}
+		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 	}
 }
 

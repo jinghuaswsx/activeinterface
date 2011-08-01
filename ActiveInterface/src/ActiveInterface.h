@@ -281,6 +281,17 @@ namespace ai{
 			throw (ActiveException);
 
 		/**
+		 * Method to return all connections
+		 *
+		 * @param connectionListR list of connections in which the method stores the connections that has
+		 * the destination specificied by destination param.
+		 *
+		 * @throws ActiveException if something bad happens
+		 */
+		void getConnections(std::list<ActiveConnection*>& connectionListR)
+			throw (ActiveException);
+
+		/**
 		 * Method that returns all services that are using in this time
 		 *
 		 * @param servicesList reference array in which method is going to write all

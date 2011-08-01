@@ -252,6 +252,9 @@ int ActiveProducer::send(){
 				//mutex for starting recovery mode
 				activateRecoveryMutex.unlock();
 
+				logMessage << "Text message sent from connection "<< getId() << " to queue " << getDestination() << std::endl;
+				LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+
 				//sending message
 				producer->send(	textMessage,
 								getPersistent(),
@@ -259,9 +262,6 @@ int ActiveProducer::send(){
 								activeMessageToSend.getTimeToLive());
 
 				if (getState()!=CONNECTION_CLOSED){
-
-					logMessage << "Text message sent from connection "<< getId() << " to queue " << getDestination() << " with:"<<activeMessageToSend.getText();
-					LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 
 					isQueueReadyAgain(activeMessageToSend);
 

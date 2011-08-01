@@ -148,6 +148,10 @@ void ActiveInterface::send(	std::string& serviceId,
 			AI_THROW_AIE;
 		}
 		readersWriters.readerLock();
+
+		logMessage << "New message sent by the user" << std::endl;
+		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+
 		ActiveManager::getInstance()->sendData(	serviceId,
 												activeMessage,
 												positionInQueue);
@@ -552,6 +556,30 @@ void ActiveInterface::getConnsByDestination(	std::string& destination,
 		readersWriters.readerUnlock();
 		logMessage << "ActiveInterface::getConnsByDestination. Exception " <<
 				destination << " " << ae.getMessage();
+		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
+	}catch (...){
+		readersWriters.readerUnlock();
+		logMessage.str("Unknown exception getting connections. Check logs.");
+		LOG4CXX_ERROR(logger, logMessage.str().c_str());
+		throw ActiveException(logMessage);
+	}
+}
+
+void ActiveInterface::getConnections(std::list<ActiveConnection*>& connectionListR) throw (ActiveException){
+	std::stringstream logMessage;
+	try{
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
+		readersWriters.readerLock();
+		ActiveManager::getInstance()->getConnections(connectionListR);
+		readersWriters.readerUnlock();
+	}catch (ActiveException& ae){
+		readersWriters.readerUnlock();
+		logMessage << "ActiveInterface::getConnections. Exception " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 	}catch(ActiveInputException& aie){
 		LOG4CXX_ERROR(logger,aie.getMessage().c_str());

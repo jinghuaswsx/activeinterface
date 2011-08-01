@@ -237,6 +237,10 @@ bool ActivePersistence::getNextMessage(ActiveMessage& activeMessageR){
 			logMessage << "POSSIBLE DATA LOSS. Message was not found in position "<<positionInFile;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 			return false;
+		}catch (boost::archive::archive_exception& be){
+			logMessage << "POSSIBLE DATA LOSS. Message was not found in position "<<positionInFile << be.what();
+			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
+			return false;
 		}catch (...){
 			logMessage << "POSSIBLE DATA LOSS. Message was not found in position "<<positionInFile;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
@@ -345,20 +349,27 @@ int ActivePersistence::serialize (ActiveMessage& activeMessage){
 				persistenceFile << activeMessage;
 			}
 			lastWrote++;
-			logMessage << "Object serialized :" << activeMessage.getText() << " in position " << lastWrote;
+			logMessage << "Object serialized " << " in position " << lastWrote;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 			//unlocking mutex
 			persistenceMutex.unlock();
+
 		}catch (boost::exception& be){
 			//unlocking mutex
 			persistenceMutex.unlock();
 			logMessage << "POSSIBLE DATA LOSS. Error writing persistence file " << getDataFilename();
 			LOG4CXX_FATAL (logger,logMessage.str().c_str());
 			throw ActiveException (logMessage.str());
+		}catch (boost::archive::archive_exception& be){
+			//unlocking mutex
+			persistenceMutex.unlock();
+			logMessage << " POSSIBLE DATA LOSS. Error writing persistence file " << getDataFilename() << be.what();
+			LOG4CXX_FATAL (logger,logMessage.str().c_str());
+			throw ActiveException (logMessage.str());
 		}catch (...){
 			//unlocking mutex
 			persistenceMutex.unlock();
-			logMessage << "POSSIBLE DATA LOSS. Error writing persistence file " << getDataFilename();
+			logMessage << "  POSSIBLE DATA LOSS. Error writing persistence file " << getDataFilename() << ". Unknown.";
 			LOG4CXX_FATAL (logger,logMessage.str().c_str());
 			throw ActiveException (logMessage.str());
 		}
@@ -377,16 +388,23 @@ void ActivePersistence::deserialize (ActiveMessage& activeMessageR){
 			persistenceFile >> activeMessageR;
 			//unlocking mutex
 			persistenceMutex.unlock();
+
 		}catch (boost::exception& be){
 			//unlocking mutex
 			persistenceMutex.unlock();
-			logMessage << "POSSIBLE DATA LOSS. Error writing persistence file " << getDataFilename();
+			logMessage << "POSSIBLE DATA LOSS. Error reading persistence file " << getDataFilename();
+			LOG4CXX_FATAL (logger,logMessage.str().c_str());
+			throw ActiveException (logMessage.str());
+		}catch (boost::archive::archive_exception& be){
+			//unlocking mutex
+			persistenceMutex.unlock();
+			logMessage << "POSSIBLE DATA LOSS. Error reading persistence file " << getDataFilename() << be.what();
 			LOG4CXX_FATAL (logger,logMessage.str().c_str());
 			throw ActiveException (logMessage.str());
 		}catch (...){
 			//unlocking mutex
 			persistenceMutex.unlock();
-			logMessage << "POSSIBLE DATA LOSS. Error writing persistence file " << getDataFilename();
+			logMessage << "POSSIBLE DATA LOSS. Error reading persistence file " << getDataFilename() << ". Unknown.";
 			LOG4CXX_FATAL (logger,logMessage.str().c_str());
 			throw ActiveException (logMessage.str());
 		}
@@ -437,7 +455,7 @@ void ActivePersistence::setPositionToSend(){
 			logMessage << "Active exception. POSSIBLE DATA LOSS. " << ae.getMessage() << std::endl;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 		}catch (boost::archive::archive_exception& stdexc){
-			logMessage << "Boost archive exception. POSSIBLE DATA LOSS. "<<dataFilename.str() << std::endl;
+			logMessage << "Boost archive exception. POSSIBLE DATA LOSS. "<<dataFilename.str() << stdexc.what() << std::endl;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 		}catch (...){
 			logMessage << "Unknown exception. POSSIBLE DATA LOSS. File exists? "<<dataFilename.str() << std::endl;
