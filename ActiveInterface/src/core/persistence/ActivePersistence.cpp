@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -169,6 +169,8 @@ long ActivePersistence::getNumberMessagesSerialized(){
 				position++;
 				localPositionInFile=ifs.tellg();
 			}catch(...){
+				logMessage << "No more data to read from file.";
+				LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 				moreToRead=false;
 			}
 		}
@@ -234,11 +236,11 @@ bool ActivePersistence::getNextMessage(ActiveMessage& activeMessageR){
 			positionInFile=ifs.tellg();
 			return true;
 		}catch (boost::exception& be){
-			logMessage << "POSSIBLE DATA LOSS. Message was not found in position "<<positionInFile;
+			logMessage << "POSSIBLE DATA LOSS. Boost Exception. Message was not found in position "<<positionInFile;
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 			return false;
 		}catch (boost::archive::archive_exception& be){
-			logMessage << "POSSIBLE DATA LOSS. Message was not found in position "<<positionInFile << be.what();
+			logMessage << "POSSIBLE DATA LOSS. Boost Exception. Message was not found in position "<<positionInFile << be.what();
 			LOG4CXX_DEBUG (logger,logMessage.str().c_str());
 			return false;
 		}catch (...){
@@ -278,7 +280,7 @@ void ActivePersistence::oneMoreSent (bool dequeueInRecovery){
 					activeConnection->setState(CONNECTION_RUNNING);
 					positionInFile=0;
 				}else if (activePersistenceThread.getActiveSharedObject()->getMessagesReady()<(lastWrote-lastEnqueue)){
-						newMessage(true);
+					newMessage(true);
 				}
 			}
 			rollFile();
@@ -330,7 +332,7 @@ void ActivePersistence::rollFile() throw (ActiveException){
 				positionInFile=0;
 			}
 		}catch(...){
-			logMessage << "Unknown exception rolling persistence file. THIS IS BAD.";
+			logMessage << "ERROR. Unknown exception rolling persistence file.";
 			throw ActiveException(logMessage.str());
 		}
 	}
@@ -392,13 +394,13 @@ void ActivePersistence::deserialize (ActiveMessage& activeMessageR){
 		}catch (boost::exception& be){
 			//unlocking mutex
 			persistenceMutex.unlock();
-			logMessage << "POSSIBLE DATA LOSS. Error reading persistence file " << getDataFilename();
+			logMessage << "POSSIBLE DATA LOSS. Boost Exception. Error reading persistence file " << getDataFilename();
 			LOG4CXX_FATAL (logger,logMessage.str().c_str());
 			throw ActiveException (logMessage.str());
 		}catch (boost::archive::archive_exception& be){
 			//unlocking mutex
 			persistenceMutex.unlock();
-			logMessage << "POSSIBLE DATA LOSS. Error reading persistence file " << getDataFilename() << be.what();
+			logMessage << "POSSIBLE DATA LOSS. Boost Exception. Error reading persistence file " << getDataFilename() << be.what();
 			LOG4CXX_FATAL (logger,logMessage.str().c_str());
 			throw ActiveException (logMessage.str());
 		}catch (...){

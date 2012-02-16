@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -88,9 +88,9 @@ int ActiveConsumerThread::runThread (){
 }
 
 ActiveConsumerThread::~ActiveConsumerThread() {
+	LOG4CXX_DEBUG (logger,"Exiting consumer thread.");
 	if (threadRunning==APR_SUCCESS){
-		LOG4CXX_DEBUG (logger,"Exiting consumer thread.");
 		apr_thread_join(&rv, thd_arr);
-		LOG4CXX_DEBUG (logger,"Consumer thread exited!.")
 	}
+	LOG4CXX_DEBUG (logger,"Consumer thread exited!.")
 }

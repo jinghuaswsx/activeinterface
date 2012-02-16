@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -82,11 +82,6 @@ namespace ai{
 		 */
 		static log4cxx::LoggerPtr logger;
 
-		/**
-		 * Method to log a message with INFO level
-		 */
-		void logIt (std::stringstream& logMessage);
-
 	public:
 		/**
 		 * Default constructor that initializes all APR symbols
@@ -148,6 +143,14 @@ namespace ai{
 		int congestionControl(long long messagesReady);
 
 		/**
+		 * Method that sets a value to threadrunning
+		 *
+		 * @param value
+		 */
+		void setThreadState(int threadState){ threadRunning=threadState;}
+
+
+		/**
 		 * Method to end the producer thread
 		 */
 		void endThread();
@@ -156,6 +159,11 @@ namespace ai{
 		 * Method to stop the thread
 		 */
 		void stop();
+
+		/**
+		 * Method to log a message with INFO level
+		 */
+		void logIt (std::stringstream& logMessage);
 
 		/**
 		 * Default destructor

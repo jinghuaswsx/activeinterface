@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -19,7 +19,7 @@
  * @section DESCRIPTION
  *
  * Class that is the parent class that abstracts from the real producer/consumer
- * wrappers. This class stores all information about this connection to the brok
+ * wrappers. This class stores all information about this connection to the broker
  */
 
 #include "ActiveConnection.h"

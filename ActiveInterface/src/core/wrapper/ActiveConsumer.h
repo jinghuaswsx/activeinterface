@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -197,6 +197,16 @@ namespace ai{
 		 * @param activeMessageR message that is in the queue.
 		 */
 		void isQueueReadyAgain(ActiveMessage& activeMessageR);
+
+		/**
+		 * Method to handle the advisory messages, converts from its structure to
+		 * ActiveMessage.
+		 *
+		 * @param message message received
+		 */
+		void handleAdvisoryMessages(std::auto_ptr<cms::Message> message,
+									ActiveMessage& activeMessage)
+			throw (ActiveException);
 
 	public:
 

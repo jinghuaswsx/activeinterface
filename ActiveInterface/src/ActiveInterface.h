@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -289,6 +289,17 @@ namespace ai{
 		 * @throws ActiveException if something bad happens
 		 */
 		void getConnections(std::list<ActiveConnection*>& connectionListR)
+			throw (ActiveException);
+
+
+		/**
+		 * Method to return the given connection
+		 *
+		 * @param connection id
+		 *
+		 * @throws ActiveException if something bad happens
+		 */
+		void getConnection(std::string& connectionId)
 			throw (ActiveException);
 
 		/**

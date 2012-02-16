@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -143,9 +143,10 @@ void ActivePersistenceThread::stop(){
 }
 
 ActivePersistenceThread::~ActivePersistenceThread() {
+	LOG4CXX_DEBUG (logger,"Exiting persistence thread.");
 	if (threadRunning==APR_SUCCESS){
-		LOG4CXX_DEBUG (logger,"Exiting persistence thread.");
+		endThread();
 		apr_thread_join(&rv, thd_arr);
-		LOG4CXX_DEBUG (logger,"Exited persistence thread succesfully!.");
 	}
+	LOG4CXX_DEBUG (logger,"Exited persistence thread succesfully!.");
 }

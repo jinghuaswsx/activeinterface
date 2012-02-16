@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -135,6 +135,7 @@ void ActiveProducer::run() throw (ActiveException){
 																	getUsername(),
 																	getPassword(),
 																	getClientId());
+
 				connection->start();
 				connection->setExceptionListener(this);
 			} catch( CMSException& e ) {
@@ -178,7 +179,11 @@ void ActiveProducer::run() throw (ActiveException){
 			}
 
 			//setting flag state to running
-			setState(CONNECTION_RUNNING);
+			// if the connection doesnt start and you send messages starting the persistence
+			// you have to not set to running
+			if (getState()!=CONNECTION_IN_PERSISTENCE){
+				setState(CONNECTION_RUNNING);
+			}
 
 			//run send thread
 			activeThread.runSendThread();
@@ -212,6 +217,10 @@ int ActiveProducer::send(){
 	ActiveMessage activeMessageToSend;
 
 	try{
+
+		logMessage << "Sending message from connection "<< getId() << " to queue " << getDestination() << std::endl;
+		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
+		logMessage.str("");
 
 		//mutex for starting recovery mode
 		activateRecoveryMutex.lock();
@@ -919,8 +928,6 @@ void ActiveProducer::isQueueReadyAgain(ActiveMessage& activeMessageR){
 
 void ActiveProducer::start(){
 	try{
-		//starting perssistence
-		activePersistence.init(*this);
 		//run all
 		run();
 	}catch(ActiveException& ae){
@@ -939,7 +946,7 @@ void ActiveProducer::stop(){
 		//ending consumer thread
 		endConsumerThread();
 		//ending persistence thread
-		activePersistence.stopThread();
+		//activePersistence.stopThread();
 		//ending the producer thread
 		activeThread.stop();
 		//clean up
@@ -958,6 +965,11 @@ void ActiveProducer::close() {
 	std::stringstream logMessage;
 	logMessage << "Producer::close. Closing producer " << getIpBroker() <<" " << getDestination()<< "...";
 	LOG4CXX_INFO(logger, logMessage.str().c_str());
+
+	if (activeQueue.getSizeQueue()>0){
+		logMessage.str("Producer::close. POSSIBLE DATA LOSS. There are pending messages in buffer to send.");
+		LOG4CXX_ERROR(logger, logMessage.str().c_str());
+	}
 
 	//setting state to close
 	setState(CONNECTION_CLOSED);

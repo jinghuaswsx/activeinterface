@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -91,13 +91,24 @@ static void* APR_THREAD_FUNC sendThread(apr_thread_t *thd, void *data){
 			if (mySharedObject->getMessagesReady()>0){
 				//myProducerThread->congestionControl(mySharedObject->getMessagesReady());
 				myActiveProducer->send();
+			}else{
+				std::stringstream aux;
+				aux << "Unblocked sending data, but no messages ready... what?" << std::endl;
+				((ActiveProducerThread*)data)->logIt(aux);
 			}
 
 		}
+
+		std::stringstream aux;
+		aux << "Getting out of sending thread..." << std::endl;
+		((ActiveProducerThread*)data)->logIt(aux);
+
 		apr_thread_exit(thd, APR_SUCCESS);
 		return NULL;
 	}else{
-		std::cout << "Failed communication with cms. Producer thread can not send." << std::endl;
+		std::stringstream aux;
+		aux << "Failed communication with cms. Producer thread can not send." << std::endl;
+		((ActiveProducerThread*)data)->logIt(aux);
 		return NULL;
 	}
 }
@@ -112,16 +123,21 @@ int ActiveProducerThread::runSendThread (){
 
 void ActiveProducerThread::newMessage(bool received){
 	//std::cout << "antes del lock"<< std::endl;
+	std::stringstream aux;
 	apr_thread_mutex_lock(activeSharedObject.getMutex());
 	if (received){
 		activeSharedObject.newMessage();
+		aux << "New message added to sent "<< activeSharedObject.getMessagesReady() << std::endl;
+		logIt(aux);
 	}else{
 		activeSharedObject.messageSent();
+		aux << "A message was substract "<< activeSharedObject.getMessagesReady() << std::endl;
+		logIt(aux);
 	}
 	apr_thread_cond_signal(activeSharedObject.getCond());
 	//std::cout << "despues y antes del unlock"<<std::endl;
 	apr_thread_mutex_unlock(activeSharedObject.getMutex());
-	//std::cout << "despues del lock"<<std::endl;
+
 }
 
 void ActiveProducerThread::endThread(){
@@ -132,7 +148,7 @@ void ActiveProducerThread::endThread(){
 }
 
 void ActiveProducerThread::logIt (std::stringstream& logMessage){
-	LOG4CXX_INFO(logger, logMessage.str().c_str());
+	LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 	logMessage.str("");
 }
 
@@ -145,9 +161,10 @@ void ActiveProducerThread::stop(){
 }
 
 ActiveProducerThread::~ActiveProducerThread() {
+	LOG4CXX_DEBUG (logger,"Exiting producer thread.");
 	if (threadRunning==APR_SUCCESS){
-		LOG4CXX_DEBUG (logger,"Exiting producer thread.");
+		endThread();
 		apr_thread_join(&rv, thd_arr);
-		LOG4CXX_DEBUG (logger,"Exited producer thread succesfully!.");
 	}
+	LOG4CXX_DEBUG (logger,"Exited producer thread succesfully!.");
 }

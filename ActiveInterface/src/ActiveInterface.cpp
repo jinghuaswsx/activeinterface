@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -580,6 +580,30 @@ void ActiveInterface::getConnections(std::list<ActiveConnection*>& connectionLis
 	}catch (ActiveException& ae){
 		readersWriters.readerUnlock();
 		logMessage << "ActiveInterface::getConnections. Exception " << ae.getMessage();
+		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
+	}catch(ActiveInputException& aie){
+		LOG4CXX_ERROR(logger,aie.getMessage().c_str());
+		throw ActiveException(aie.getMessage());
+	}catch (...){
+		readersWriters.readerUnlock();
+		logMessage.str("Unknown exception getting connections. Check logs.");
+		LOG4CXX_ERROR(logger, logMessage.str().c_str());
+		throw ActiveException(logMessage);
+	}
+}
+
+void ActiveInterface::getConnection(std::string& connectionId) throw (ActiveException){
+	std::stringstream logMessage;
+	try{
+		if (getState()!=INITIALIZED){
+			AI_THROW_AIE;
+		}
+		readersWriters.readerLock();
+		ActiveManager::getInstance()->getConnection(connectionId);
+		readersWriters.readerUnlock();
+	}catch (ActiveException& ae){
+		readersWriters.readerUnlock();
+		logMessage << "ActiveInterface::getConnection. Exception " << ae.getMessage();
 		LOG4CXX_DEBUG(logger,logMessage.str().c_str());
 	}catch(ActiveInputException& aie){
 		LOG4CXX_ERROR(logger,aie.getMessage().c_str());

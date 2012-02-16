@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 0.1
+ * @version 1.2.2
  *
  * @section LICENSE
  *
@@ -30,6 +30,7 @@
 #include <activemq/core/ActiveMQConnectionFactory.h>
 #include <activemq/core/ActiveMQConnection.h>
 #include <activemq/library/ActiveMQCPP.h>
+#include <activemq/commands/ActiveMQMessage.h>
 
 using namespace ai::message;
 using namespace activemq::core;
@@ -303,9 +304,13 @@ int ActiveConsumer::onReceive(){
 						LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 					}
 
-				/////////////////////////////////////////////////////////////
-				// text message
+				}else if (message->getCMSType()=="Advisory"){
+					//Advisory messages
+					handleAdvisoryMessages(message, activeMessage);
+
 				}else{
+					/////////////////////////////////////////////////////////////
+					// text message
 					TextMessage* textMessage=(TextMessage*)message.get();
 					std::string textReceived=textMessage->getText();
 					activeMessage.setText(textReceived);
@@ -360,6 +365,36 @@ int ActiveConsumer::onReceive(){
 
 	return 0;
 }
+
+void ActiveConsumer::handleAdvisoryMessages(std::auto_ptr<cms::Message> message,
+											ActiveMessage& activeMessage)
+	throw (ActiveException){
+
+	std::stringstream logMessage;
+
+	try{
+
+//        const activemq::commands::ActiveMQMessage* amqMessage=(activemq::commands::ActiveMQMessage*)message.get();
+//        if( amqMessage != NULL && amqMessage->getDataStructure() != NULL ) {
+//        	if (amqMessage->)
+//        	const activemq::commands::ConnectionInfo* connInfo=
+//        			dynamic_cast<const activemq::commands::ConnectionInfo*>(amqMessage->getDataStructure().get());
+//        	const activemq::commands::RemoveInfo* disconnInfo=
+//        			dynamic_cast<const activemq::commands::RemoveInfo*>(amqMessage->getDataStructure().get());
+//        }
+//
+//		std::vector<std::string> propertyNames=message->getPropertyNames();
+//		std::vector<std::string>::iterator iteratorProperties;
+//		for (iteratorProperties=propertyNames.begin(); iteratorProperties!=propertyNames.end();iteratorProperties++){
+//			std::cout << *iteratorProperties << std::endl;
+//		}
+
+	}catch(...){
+		logMessage << "Consumer::handleAdvisoryMessages. Unknown exception";
+		LOG4CXX_ERROR(logger, logMessage.str().c_str());
+	}
+}
+
 
 void ActiveConsumer::loadProperties(TextMessage* textMessage, ActiveMessage& activeMessage)
 	throw (ActiveException){
