@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 1.2.2
+ * @version 1.2.3
  *
  * @section LICENSE
  *

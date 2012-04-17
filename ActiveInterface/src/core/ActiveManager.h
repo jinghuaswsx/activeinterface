@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 1.2.2
+ * @version 1.2.3
  *
  * @section LICENSE
  *
@@ -68,7 +68,9 @@ namespace ai{
 		 *
 		 * @throws ActiveException if something bad happens
 		 */
-		void init(const std::string& configurationFile, ActiveInterface* activeInterfacePtr)
+		void init(	const std::string& configurationFile,
+					ActiveInterface* activeInterfacePtr,
+					bool messageSerializedInConsumptionR)
 			throw (ActiveException);
 
 		/**
@@ -568,6 +570,11 @@ namespace ai{
 		 * Mutex that serializes the  access to onMessage function of the user
 		 */
 		ActiveMutex messageSerializer;
+
+		/**
+		 * Variable to serialize messages received or not for each connection
+		 */
+		bool messageSerializedInConsumption;
 
 		/**
 		 * Default constructor, is private for the singleton

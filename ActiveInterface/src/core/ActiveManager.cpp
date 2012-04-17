@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 1.2.2
+ * @version 1.2.3
  *
  * @section LICENSE
  *
@@ -49,9 +49,13 @@ ActiveManager::ActiveManager() {
 	mySelf=NULL;
 	//reference to activeInterface for callback
 	activeInterfacePtr=NULL;
+	//by default we are going to serialize messages in consumption
+	messageSerializedInConsumption=false;
 }
 
-void ActiveManager::init (const std::string& configurationFile, ActiveInterface* activeInterfacePtrR )
+void ActiveManager::init (	const std::string& configurationFile,
+							ActiveInterface* activeInterfacePtrR,
+							bool messageSerializedInConsumptionR)
 	throw (ActiveException){
 
 	std::stringstream logMessage;
@@ -60,10 +64,13 @@ void ActiveManager::init (const std::string& configurationFile, ActiveInterface*
 	    activeInterfacePtr=activeInterfacePtrR;
 		//initializing activemq-cpp library
 	    activemq::library::ActiveMQCPP::initializeLibrary();
+		//serializing onMessage in user space or not
+		messageSerializedInConsumption=messageSerializedInConsumptionR;
 		//initializing xml library
 		initXMLLibrary(configurationFile);
 		//initializing all memory structures extracted from xml
 		initMemStructures();
+
 	}catch (ActiveException& e){
 		throw e;
 	}
@@ -1017,20 +1024,29 @@ void ActiveManager::onMessageCallback (ActiveMessage& activeMessage){
 
 	std::stringstream logMessage;
 
-	messageSerializer.lock();
+	//disable locking if user says that messages are not serialized
+	if (messageSerializedInConsumption){
+		messageSerializer.lock();
+	}
+
 	if (activeInterfacePtr!=NULL){
 		try{
 			activeInterfacePtr->onMessage(activeMessage);
 		}catch(...){
 			//protecting user error
 			LOG4CXX_DEBUG(logger,"ERROR handling the message by the user, protecting it!");
-			messageSerializer.unlock();
+			if (messageSerializedInConsumption){
+				messageSerializer.unlock();
+			}
 		}
 	}else{
 		logMessage << "ActiveManager::onMessageCallback. Callback is null";
 		LOG4CXX_DEBUG(logger, logMessage.str().c_str());
 	}
-	messageSerializer.unlock();
+
+	if (messageSerializedInConsumption){
+		messageSerializer.unlock();
+	}
 }
 
 //mehtod that returns connection interrupt callback

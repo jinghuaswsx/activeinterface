@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 1.2.2
+ * @version 1.2.3
  *
  * @section LICENSE
  *
@@ -41,7 +41,8 @@ using namespace ai;
 
 LoggerPtr ActiveInterface::logger(Logger::getLogger("ActiveInterface"));
 
-void ActiveInterface::init(const std::string& configurationFile)
+void ActiveInterface::init(	const std::string& configurationFile,
+							bool messageSerializedInConsumption)
 	throw (ActiveException){
 
 	std::stringstream logMessage;
@@ -57,7 +58,9 @@ void ActiveInterface::init(const std::string& configurationFile)
 		 setState(NOT_INITIALIZED);
     	 try{
     		 //initializing...
-    		 ActiveManager::getInstance()->init(configurationFile,this);
+    		 ActiveManager::getInstance()->init(	configurationFile,
+													this,
+													messageSerializedInConsumption);
     	 }catch(...){
     		 logMessage << "ActiveException. Library is not initialized by XML File.";
     		 LOG4CXX_DEBUG(logger, logMessage.str().c_str());

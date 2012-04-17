@@ -1,7 +1,7 @@
 /**
  * @file
  * @author  Oscar Pernas <oscar@pernas.es>
- * @version 1.2.2
+ * @version 1.2.3
  *
  * @section LICENSE
  *
@@ -58,10 +58,13 @@ namespace ai{
 		 *
 		 * @param configurationFile FileName for the configuration file. By default will be
 		 * ActiveConfiguration.xml
+		 * @param messageSerializedInConsumption If true, ActiveInterface is not goint to serialize messages
+		 * in onMessage method, user should take care of concurrency
 		 *
 		 * @throws ActiveException with description
 		 */
-		void init(const std::string& configurationFile="ActiveConfiguration.xml")
+		void init(	const std::string& configurationFile="ActiveConfiguration.xml",
+					bool messageSerializedInConsumption=true)
 			throw ( ActiveException );
 
 		/**
